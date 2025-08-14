@@ -11,7 +11,11 @@ import {
   Video
 } from "lucide-react";
 
-export const AppointmentScreen = () => {
+interface AppointmentScreenProps {
+  onBack: () => void;
+}
+
+export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
   const appointments = [
     {
       doctor: "Dr. Sarah Smith",
@@ -47,7 +51,7 @@ export const AppointmentScreen = () => {
       {/* Header */}
       <div className="bg-care-blue text-white p-6">
         <div className="flex items-center mb-4">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 mr-3">
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 mr-3" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-semibold">Appointments</h1>

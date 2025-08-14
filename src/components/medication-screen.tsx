@@ -10,7 +10,11 @@ import {
   Check
 } from "lucide-react";
 
-export const MedicationScreen = () => {
+interface MedicationScreenProps {
+  onBack: () => void;
+}
+
+export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
   const medications = [
     {
       name: "Vitamin D3",
@@ -40,7 +44,7 @@ export const MedicationScreen = () => {
       {/* Header */}
       <div className="bg-care-blue text-white p-6">
         <div className="flex items-center mb-4">
-          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 mr-3">
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 mr-3" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-semibold">Medications</h1>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MobileContainer } from "@/components/ui/mobile-container";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,10 +10,26 @@ import {
   Pill, 
   Activity,
   Clock,
-  Plus
+  Plus,
+  LogOut
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { useUserData } from "@/hooks/use-user-data";
+import { MedicationScreen } from "./medication-screen";
+import { AppointmentScreen } from "./appointment-screen";
 
 export const MainDashboard = () => {
+  const [activeScreen, setActiveScreen] = useState<"dashboard" | "medications" | "appointments">("dashboard");
+  const { signOut, user } = useAuth();
+  const { profile, medications, appointments, loading } = useUserData();
+
+  if (activeScreen === "medications") {
+    return <MedicationScreen onBack={() => setActiveScreen("dashboard")} />;
+  }
+
+  if (activeScreen === "appointments") {
+    return <AppointmentScreen onBack={() => setActiveScreen("dashboard")} />;
+  }
   return (
     <MobileContainer>
       {/* Header */}
@@ -20,11 +37,16 @@ export const MainDashboard = () => {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-xl font-semibold">Good Morning,</h1>
-            <p className="text-blue-100">Sarah Wilson</p>
+            <p className="text-blue-100">
+              {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+            </p>
           </div>
           <div className="flex items-center space-x-3">
             <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
               <Bell className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={signOut}>
+              <LogOut className="h-5 w-5" />
             </Button>
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
               <User className="h-6 w-6" />
@@ -48,11 +70,19 @@ export const MainDashboard = () => {
       {/* Quick Actions */}
       <div className="p-6 -mt-4">
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <Button variant="outline" className="h-20 flex-col space-y-2 border-care-blue/20">
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col space-y-2 border-care-blue/20"
+            onClick={() => setActiveScreen("medications")}
+          >
             <Pill className="h-6 w-6 text-care-blue" />
             <span className="text-sm">Medications</span>
           </Button>
-          <Button variant="outline" className="h-20 flex-col space-y-2 border-care-blue/20">
+          <Button 
+            variant="outline" 
+            className="h-20 flex-col space-y-2 border-care-blue/20"
+            onClick={() => setActiveScreen("appointments")}
+          >
             <Calendar className="h-6 w-6 text-care-blue" />
             <span className="text-sm">Appointments</span>
           </Button>
@@ -69,37 +99,56 @@ export const MainDashboard = () => {
           </div>
 
           <div className="space-y-3">
-            <Card className="p-4 border-l-4 border-l-care-green">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Morning Medication</p>
-                  <p className="text-sm text-care-gray">Vitamin D, Omega-3</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">8:00 AM</p>
-                  <div className="flex items-center text-xs text-care-green">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Completed
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-4 border-l-4 border-l-care-orange">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Doctor Appointment</p>
-                  <p className="text-sm text-care-gray">Dr. Smith - Cardiology</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">2:30 PM</p>
-                  <div className="flex items-center text-xs text-care-orange">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Upcoming
-                  </div>
-                </div>
-              </div>
-            </Card>
+            {loading ? (
+              <p className="text-care-gray">Loading...</p>
+            ) : (
+              <>
+                {medications.slice(0, 2).map((medication) => (
+                  <Card key={medication.id} className="p-4 border-l-4 border-l-care-green">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{medication.name}</p>
+                        <p className="text-sm text-care-gray">{medication.dosage} - {medication.frequency}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">Active</p>
+                        <div className="flex items-center text-xs text-care-green">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Daily
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+                
+                {appointments.slice(0, 1).map((appointment) => (
+                  <Card key={appointment.id} className="p-4 border-l-4 border-l-care-orange">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{appointment.doctor_name}</p>
+                        <p className="text-sm text-care-gray">{appointment.appointment_type}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          {new Date(appointment.appointment_date).toLocaleDateString()}
+                        </p>
+                        <div className="flex items-center text-xs text-care-orange">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {appointment.is_virtual ? "Virtual" : "In-person"}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+                
+                {medications.length === 0 && appointments.length === 0 && (
+                  <Card className="p-4 text-center">
+                    <p className="text-care-gray">No scheduled items today</p>
+                    <p className="text-sm text-care-gray mt-2">Add medications or appointments to get started</p>
+                  </Card>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -128,11 +177,21 @@ export const MainDashboard = () => {
             <Activity className="h-5 w-5" />
             <span className="text-xs">Dashboard</span>
           </Button>
-          <Button variant="ghost" size="sm" className="flex-col space-y-1 text-care-gray">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex-col space-y-1 text-care-gray"
+            onClick={() => setActiveScreen("appointments")}
+          >
             <Calendar className="h-5 w-5" />
             <span className="text-xs">Schedule</span>
           </Button>
-          <Button variant="ghost" size="sm" className="flex-col space-y-1 text-care-gray">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex-col space-y-1 text-care-gray"
+            onClick={() => setActiveScreen("medications")}
+          >
             <Pill className="h-5 w-5" />
             <span className="text-xs">Meds</span>
           </Button>

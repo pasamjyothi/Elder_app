@@ -3,21 +3,29 @@ import { MobileContainer } from "@/components/ui/mobile-container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/use-auth";
 import careNestLogo from "@/assets/carenest-logo.png";
 
-interface LoginScreenProps {
-  onLogin: () => void;
-}
-
-export const LoginScreen = ({ onLogin }: LoginScreenProps) => {
+export const LoginScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn, signUp } = useAuth();
 
-  const handleLogin = () => {
-    // Simple validation
-    if (email && password) {
-      onLogin();
+  const handleSubmit = async () => {
+    if (!email || !password) return;
+    
+    setLoading(true);
+    
+    if (isSignUp) {
+      await signUp(email, password, fullName);
+    } else {
+      await signIn(email, password);
     }
+    
+    setLoading(false);
   };
 
   return (
@@ -32,11 +40,29 @@ export const LoginScreen = ({ onLogin }: LoginScreenProps) => {
                 className="w-12 h-12"
               />
             </div>
-            <h1 className="text-2xl font-bold text-foreground mb-2">Welcome Back</h1>
-            <p className="text-care-gray">Sign in to continue</p>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              {isSignUp ? "Create Account" : "Welcome Back"}
+            </h1>
+            <p className="text-care-gray">
+              {isSignUp ? "Sign up to get started" : "Sign in to continue"}
+            </p>
           </div>
 
           <div className="space-y-6">
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="h-12"
+                />
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -62,17 +88,21 @@ export const LoginScreen = ({ onLogin }: LoginScreenProps) => {
             </div>
 
             <Button 
-              onClick={handleLogin}
-              className="w-full h-12 bg-care-blue hover:bg-care-blue-dark text-white font-medium"
+              onClick={handleSubmit}
+              disabled={loading || !email || !password || (isSignUp && !fullName)}
+              className="w-full h-12 bg-care-blue hover:bg-care-blue-dark text-white font-medium disabled:opacity-50"
             >
-              Sign In
+              {loading ? "Loading..." : (isSignUp ? "Sign Up" : "Sign In")}
             </Button>
 
             <div className="text-center">
               <p className="text-sm text-care-gray">
-                Don't have an account?{" "}
-                <span className="text-care-blue font-medium cursor-pointer">
-                  Sign up
+                {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                <span 
+                  className="text-care-blue font-medium cursor-pointer"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                >
+                  {isSignUp ? "Sign in" : "Sign up"}
                 </span>
               </p>
             </div>

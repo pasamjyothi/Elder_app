@@ -1,27 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SplashScreen } from "@/components/splash-screen";
 import { LoginScreen } from "@/components/login-screen";
 import { MainDashboard } from "@/components/main-dashboard";
+import { useAuth } from "@/hooks/use-auth";
 
-type AppState = "splash" | "login" | "dashboard";
+type AppState = "splash" | "auth" | "dashboard";
 
 const Index = () => {
   const [currentState, setCurrentState] = useState<AppState>("splash");
+  const { user, loading } = useAuth();
 
   const handleSplashComplete = () => {
-    setCurrentState("login");
+    setCurrentState("auth");
   };
 
-  const handleLogin = () => {
-    setCurrentState("dashboard");
-  };
+  useEffect(() => {
+    if (!loading) {
+      if (user) {
+        setCurrentState("dashboard");
+      } else if (currentState === "splash") {
+        // Keep splash state until user interaction
+      } else {
+        setCurrentState("auth");
+      }
+    }
+  }, [user, loading, currentState]);
 
-  if (currentState === "splash") {
+  if (loading || currentState === "splash") {
     return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
-  if (currentState === "login") {
-    return <LoginScreen onLogin={handleLogin} />;
+  if (!user) {
+    return <LoginScreen />;
   }
 
   return <MainDashboard />;
