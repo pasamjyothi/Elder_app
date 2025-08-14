@@ -1,14 +1,30 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { SplashScreen } from "@/components/splash-screen";
+import { LoginScreen } from "@/components/login-screen";
+import { MainDashboard } from "@/components/main-dashboard";
+
+type AppState = "splash" | "login" | "dashboard";
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
+  const [currentState, setCurrentState] = useState<AppState>("splash");
+
+  const handleSplashComplete = () => {
+    setCurrentState("login");
+  };
+
+  const handleLogin = () => {
+    setCurrentState("dashboard");
+  };
+
+  if (currentState === "splash") {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+
+  if (currentState === "login") {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  return <MainDashboard />;
 };
 
 export default Index;
