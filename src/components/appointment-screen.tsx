@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MobileContainer } from "@/components/ui/mobile-container";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import {
   Video
 } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
+import { AddAppointmentDialog } from "./add-appointment-dialog";
 
 interface AppointmentScreenProps {
   onBack: () => void;
@@ -18,6 +20,7 @@ interface AppointmentScreenProps {
 
 export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
   const { appointments, loading } = useUserData();
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   return (
     <MobileContainer>
@@ -35,7 +38,7 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
             <p className="text-blue-100">Upcoming</p>
             <p className="text-2xl font-bold">{appointments.length} appointments</p>
           </div>
-          <Button className="bg-white/20 hover:bg-white/30 text-white">
+          <Button className="bg-white/20 hover:bg-white/30 text-white" onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Book
           </Button>
@@ -51,7 +54,7 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
             <Calendar className="h-12 w-12 text-care-gray mx-auto mb-4" />
             <p className="text-care-gray font-medium mb-2">No appointments scheduled</p>
             <p className="text-sm text-care-gray mb-4">Book your first appointment to get started</p>
-            <Button className="bg-care-blue hover:bg-care-blue-dark text-white">
+            <Button className="bg-care-blue hover:bg-care-blue-dark text-white" onClick={() => setShowAddDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Book Appointment
             </Button>
@@ -136,7 +139,11 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
 
         {/* Quick Actions */}
         <div className="mt-8 grid grid-cols-2 gap-4">
-          <Button variant="outline" className="h-16 flex-col space-y-2 border-care-blue/20">
+          <Button 
+            variant="outline" 
+            className="h-16 flex-col space-y-2 border-care-blue/20"
+            onClick={() => setShowAddDialog(true)}
+          >
             <Calendar className="h-6 w-6 text-care-blue" />
             <span className="text-sm">Schedule</span>
           </Button>
@@ -146,6 +153,8 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
           </Button>
         </div>
       </div>
+      
+      <AddAppointmentDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
     </MobileContainer>
   );
 };

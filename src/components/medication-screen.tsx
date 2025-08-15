@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MobileContainer } from "@/components/ui/mobile-container";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import {
   Check
 } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
+import { AddMedicationDialog } from "./add-medication-dialog";
 
 interface MedicationScreenProps {
   onBack: () => void;
@@ -17,6 +19,7 @@ interface MedicationScreenProps {
 
 export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
   const { medications, loading } = useUserData();
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   return (
     <MobileContainer>
@@ -34,7 +37,7 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
             <p className="text-blue-100">Active Medications</p>
             <p className="text-2xl font-bold">{medications.length} total</p>
           </div>
-          <Button className="bg-white/20 hover:bg-white/30 text-white">
+          <Button className="bg-white/20 hover:bg-white/30 text-white" onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Med
           </Button>
@@ -53,7 +56,7 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
               <Pill className="h-12 w-12 text-care-gray mx-auto mb-4" />
               <p className="text-care-gray font-medium mb-2">No medications added</p>
               <p className="text-sm text-care-gray mb-4">Add your medications to track your schedule</p>
-              <Button className="bg-care-blue hover:bg-care-blue-dark text-white">
+              <Button className="bg-care-blue hover:bg-care-blue-dark text-white" onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add First Medication
               </Button>
@@ -114,6 +117,8 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
           </div>
         )}
       </div>
+      
+      <AddMedicationDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
     </MobileContainer>
   );
 };
