@@ -21,6 +21,13 @@ interface AppointmentScreenProps {
 export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
   const { appointments, loading } = useUserData();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [filterType, setFilterType] = useState<"all" | "virtual" | "in-person">("all");
+
+  const filteredAppointments = appointments.filter(apt => {
+    if (filterType === "virtual") return apt.is_virtual;
+    if (filterType === "in-person") return !apt.is_virtual;
+    return true;
+  });
 
   return (
     <MobileContainer>
@@ -35,8 +42,10 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
         
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-blue-100">Upcoming</p>
-            <p className="text-2xl font-bold">{appointments.length} appointments</p>
+            <p className="text-blue-100">
+              {filterType === "virtual" ? "Virtual" : filterType === "in-person" ? "In-person" : "Upcoming"}
+            </p>
+            <p className="text-2xl font-bold">{filteredAppointments.length} appointments</p>
           </div>
           <Button className="bg-white/20 hover:bg-white/30 text-white" onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -45,14 +54,56 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="px-6 pb-4">
+        <div className="flex bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setFilterType("all")}
+            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              filterType === "all"
+                ? "bg-white text-care-blue shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilterType("virtual")}
+            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              filterType === "virtual"
+                ? "bg-white text-care-blue shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            Virtual
+          </button>
+          <button
+            onClick={() => setFilterType("in-person")}
+            className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              filterType === "in-person"
+                ? "bg-white text-care-blue shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            In-person
+          </button>
+        </div>
+      </div>
+
       {/* Appointments List */}
-      <div className="p-6">
+      <div className="px-6">
         {loading ? (
           <p className="text-care-gray">Loading appointments...</p>
-        ) : appointments.length === 0 ? (
+        ) : filteredAppointments.length === 0 ? (
           <Card className="p-6 text-center">
             <Calendar className="h-12 w-12 text-care-gray mx-auto mb-4" />
-            <p className="text-care-gray font-medium mb-2">No appointments scheduled</p>
+            <p className="text-care-gray font-medium mb-2">
+              {filterType === "virtual" 
+                ? "No virtual appointments scheduled" 
+                : filterType === "in-person"
+                ? "No in-person appointments scheduled"
+                : "No appointments scheduled"}
+            </p>
             <p className="text-sm text-care-gray mb-4">Book your first appointment to get started</p>
             <Button className="bg-care-blue hover:bg-care-blue-dark text-white" onClick={() => setShowAddDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -61,7 +112,7 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {appointments.map((apt) => {
+            {filteredAppointments.map((apt) => {
               const appointmentDate = new Date(apt.appointment_date);
               const today = new Date();
               const isToday = appointmentDate.toDateString() === today.toDateString();
@@ -147,7 +198,13 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
             <Calendar className="h-6 w-6 text-care-blue" />
             <span className="text-sm">Schedule</span>
           </Button>
-          <Button variant="outline" className="h-16 flex-col space-y-2 border-care-blue/20">
+          <Button 
+            variant="outline" 
+            className={`h-16 flex-col space-y-2 border-care-blue/20 ${
+              filterType === "virtual" ? "bg-care-blue/10 border-care-blue" : ""
+            }`}
+            onClick={() => setFilterType("virtual")}
+          >
             <Video className="h-6 w-6 text-care-blue" />
             <span className="text-sm">Telemedicine</span>
           </Button>
