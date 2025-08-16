@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MobileContainer } from "@/components/ui/mobile-container";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,11 +17,39 @@ import { useAuth } from "@/hooks/use-auth";
 import { useUserData } from "@/hooks/use-user-data";
 import { MedicationScreen } from "./medication-screen";
 import { AppointmentScreen } from "./appointment-screen";
+import { ProfileScreen } from "./profile-screen";
+import { AddScheduleDialog } from "./add-schedule-dialog";
 
 export const MainDashboard = () => {
-  const [activeScreen, setActiveScreen] = useState<"dashboard" | "medications" | "appointments">("dashboard");
+  const [activeScreen, setActiveScreen] = useState<"dashboard" | "medications" | "appointments" | "profile">("dashboard");
   const { signOut, user } = useAuth();
-  const { profile, medications, appointments, loading } = useUserData();
+  const { profile, medications, appointments, loading, refetchData } = useUserData();
+
+  // Calculate health metrics based on real data
+  const healthMetrics = useMemo(() => {
+    const activeMedications = medications.filter(med => med.is_active).length;
+    const upcomingAppointments = appointments.filter(apt => 
+      new Date(apt.appointment_date) >= new Date()
+    ).length;
+    
+    // Simple health score calculation (you can make this more sophisticated)
+    let score = 70; // Base score
+    
+    // Add points for having medications (indicates care management)
+    if (activeMedications > 0) score += 10;
+    
+    // Add points for having upcoming appointments
+    if (upcomingAppointments > 0) score += 15;
+    
+    // Add points for complete profile
+    if (profile?.full_name && profile?.phone) score += 5;
+    
+    return {
+      healthScore: Math.min(score, 100),
+      steps: Math.floor(Math.random() * 5000) + 5000, // Simulated steps
+      heartRate: Math.floor(Math.random() * 20) + 60, // Simulated heart rate
+    };
+  }, [medications, appointments, profile]);
 
   if (activeScreen === "medications") {
     return <MedicationScreen onBack={() => setActiveScreen("dashboard")} />;
@@ -29,6 +57,10 @@ export const MainDashboard = () => {
 
   if (activeScreen === "appointments") {
     return <AppointmentScreen onBack={() => setActiveScreen("dashboard")} />;
+  }
+
+  if (activeScreen === "profile") {
+    return <ProfileScreen onBack={() => setActiveScreen("dashboard")} />;
   }
   return (
     <MobileContainer>
@@ -48,9 +80,14 @@ export const MainDashboard = () => {
             <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={signOut}>
               <LogOut className="h-5 w-5" />
             </Button>
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="w-10 h-10 bg-white/20 rounded-full text-white hover:bg-white/30"
+              onClick={() => setActiveScreen("profile")}
+            >
               <User className="h-6 w-6" />
-            </div>
+            </Button>
           </div>
         </div>
 
@@ -58,7 +95,10 @@ export const MainDashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm">Today's Health Score</p>
-              <p className="text-2xl font-bold">85%</p>
+              <p className="text-2xl font-bold">{healthMetrics.healthScore}%</p>
+              <p className="text-xs text-blue-200">
+                Based on medications, appointments & profile
+              </p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
               <Heart className="h-6 w-6 text-red-300" />
@@ -92,10 +132,7 @@ export const MainDashboard = () => {
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Today's Schedule</h2>
-            <Button variant="ghost" size="sm" className="text-care-blue">
-              <Plus className="h-4 w-4 mr-1" />
-              Add
-            </Button>
+            <AddScheduleDialog onScheduleAdded={refetchData} />
           </div>
 
           <div className="space-y-3">
@@ -158,13 +195,13 @@ export const MainDashboard = () => {
           <div className="grid grid-cols-2 gap-4">
             <Card className="p-4 text-center">
               <Activity className="h-8 w-8 text-care-blue mx-auto mb-2" />
-              <p className="text-2xl font-bold">7,245</p>
+              <p className="text-2xl font-bold">{healthMetrics.steps.toLocaleString()}</p>
               <p className="text-sm text-care-gray">Steps Today</p>
             </Card>
             <Card className="p-4 text-center">
               <Heart className="h-8 w-8 text-red-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold">72</p>
-              <p className="text-sm text-care-gray">Heart Rate</p>
+              <p className="text-2xl font-bold">{healthMetrics.heartRate}</p>
+              <p className="text-sm text-care-gray">Heart Rate (BPM)</p>
             </Card>
           </div>
         </div>
@@ -195,7 +232,12 @@ export const MainDashboard = () => {
             <Pill className="h-5 w-5" />
             <span className="text-xs">Meds</span>
           </Button>
-          <Button variant="ghost" size="sm" className="flex-col space-y-1 text-care-gray">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex-col space-y-1 text-care-gray"
+            onClick={() => setActiveScreen("profile")}
+          >
             <User className="h-5 w-5" />
             <span className="text-xs">Profile</span>
           </Button>
