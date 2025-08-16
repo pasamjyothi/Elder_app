@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MobileContainer } from "@/components/ui/mobile-container";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,15 +31,31 @@ export const ProfileScreen = ({ onBack }: ProfileScreenProps) => {
   const { profile, updateProfile, loading } = useUserData();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    full_name: profile?.full_name || "",
-    phone: profile?.phone || "",
-    date_of_birth: profile?.date_of_birth || "",
-    address: profile?.address || "",
-    emergency_contact_name: profile?.emergency_contact_name || "",
-    emergency_contact_phone: profile?.emergency_contact_phone || "",
-    medical_conditions: profile?.medical_conditions?.join(", ") || "",
-    allergies: profile?.allergies?.join(", ") || "",
+    full_name: "",
+    phone: "",
+    date_of_birth: "",
+    address: "",
+    emergency_contact_name: "",
+    emergency_contact_phone: "",
+    medical_conditions: "",
+    allergies: "",
   });
+
+  // Update form data when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || "",
+        phone: profile.phone || "",
+        date_of_birth: profile.date_of_birth || "",
+        address: profile.address || "",
+        emergency_contact_name: profile.emergency_contact_name || "",
+        emergency_contact_phone: profile.emergency_contact_phone || "",
+        medical_conditions: profile.medical_conditions?.join(", ") || "",
+        allergies: profile.allergies?.join(", ") || "",
+      });
+    }
+  }, [profile]);
 
   const handleSave = async () => {
     try {
@@ -60,16 +76,18 @@ export const ProfileScreen = ({ onBack }: ProfileScreenProps) => {
   };
 
   const handleCancel = () => {
-    setFormData({
-      full_name: profile?.full_name || "",
-      phone: profile?.phone || "",
-      date_of_birth: profile?.date_of_birth || "",
-      address: profile?.address || "",
-      emergency_contact_name: profile?.emergency_contact_name || "",
-      emergency_contact_phone: profile?.emergency_contact_phone || "",
-      medical_conditions: profile?.medical_conditions?.join(", ") || "",
-      allergies: profile?.allergies?.join(", ") || "",
-    });
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || "",
+        phone: profile.phone || "",
+        date_of_birth: profile.date_of_birth || "",
+        address: profile.address || "",
+        emergency_contact_name: profile.emergency_contact_name || "",
+        emergency_contact_phone: profile.emergency_contact_phone || "",
+        medical_conditions: profile.medical_conditions?.join(", ") || "",
+        allergies: profile.allergies?.join(", ") || "",
+      });
+    }
     setIsEditing(false);
   };
 
