@@ -26,6 +26,9 @@ export interface Medication {
   start_date: string;
   end_date?: string;
   is_active: boolean;
+  reminder_times?: string[];
+  enable_notifications?: boolean;
+  sound_alert?: boolean;
 }
 
 export interface Appointment {
@@ -38,6 +41,9 @@ export interface Appointment {
   notes?: string;
   status: string;
   is_virtual: boolean;
+  reminder_minutes?: number;
+  enable_notifications?: boolean;
+  notification_sent?: boolean;
 }
 
 export const useUserData = () => {

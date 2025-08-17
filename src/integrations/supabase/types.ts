@@ -21,9 +21,12 @@ export type Database = {
           created_at: string | null
           doctor_name: string
           duration_minutes: number | null
+          enable_notifications: boolean | null
           id: string
           is_virtual: boolean | null
           notes: string | null
+          notification_sent: boolean | null
+          reminder_minutes: number | null
           status: string | null
           updated_at: string | null
           user_id: string
@@ -34,9 +37,12 @@ export type Database = {
           created_at?: string | null
           doctor_name: string
           duration_minutes?: number | null
+          enable_notifications?: boolean | null
           id?: string
           is_virtual?: boolean | null
           notes?: string | null
+          notification_sent?: boolean | null
+          reminder_minutes?: number | null
           status?: string | null
           updated_at?: string | null
           user_id: string
@@ -47,9 +53,12 @@ export type Database = {
           created_at?: string | null
           doctor_name?: string
           duration_minutes?: number | null
+          enable_notifications?: boolean | null
           id?: string
           is_virtual?: boolean | null
           notes?: string | null
+          notification_sent?: boolean | null
+          reminder_minutes?: number | null
           status?: string | null
           updated_at?: string | null
           user_id?: string
@@ -60,12 +69,15 @@ export type Database = {
         Row: {
           created_at: string | null
           dosage: string
+          enable_notifications: boolean | null
           end_date: string | null
           frequency: string
           id: string
           instructions: string | null
           is_active: boolean | null
           name: string
+          reminder_times: string[] | null
+          sound_alert: boolean | null
           start_date: string
           updated_at: string | null
           user_id: string
@@ -73,12 +85,15 @@ export type Database = {
         Insert: {
           created_at?: string | null
           dosage: string
+          enable_notifications?: boolean | null
           end_date?: string | null
           frequency: string
           id?: string
           instructions?: string | null
           is_active?: boolean | null
           name: string
+          reminder_times?: string[] | null
+          sound_alert?: boolean | null
           start_date: string
           updated_at?: string | null
           user_id: string
@@ -86,12 +101,15 @@ export type Database = {
         Update: {
           created_at?: string | null
           dosage?: string
+          enable_notifications?: boolean | null
           end_date?: string | null
           frequency?: string
           id?: string
           instructions?: string | null
           is_active?: boolean | null
           name?: string
+          reminder_times?: string[] | null
+          sound_alert?: boolean | null
           start_date?: string
           updated_at?: string | null
           user_id?: string

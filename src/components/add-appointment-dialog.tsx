@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useUserData } from "@/hooks/use-user-data";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +22,9 @@ export const AddAppointmentDialog = ({ open, onOpenChange }: AddAppointmentDialo
     appointment_time: "",
     duration_minutes: 30,
     notes: "",
-    is_virtual: false
+    is_virtual: false,
+    reminder_minutes: 30,
+    enable_notifications: true,
   });
   const [loading, setLoading] = useState(false);
   const { addAppointment } = useUserData();
@@ -50,7 +53,10 @@ export const AddAppointmentDialog = ({ open, onOpenChange }: AddAppointmentDialo
         duration_minutes: formData.duration_minutes,
         notes: formData.notes || undefined,
         status: "scheduled",
-        is_virtual: formData.is_virtual
+        is_virtual: formData.is_virtual,
+        reminder_minutes: formData.reminder_minutes,
+        enable_notifications: formData.enable_notifications,
+        notification_sent: false,
       });
 
       if (result?.error) {
@@ -62,7 +68,7 @@ export const AddAppointmentDialog = ({ open, onOpenChange }: AddAppointmentDialo
       } else {
         toast({
           title: "Success",
-          description: "Appointment scheduled successfully!"
+          description: "Appointment scheduled successfully with reminder!"
         });
         setFormData({
           doctor_name: "",
@@ -71,7 +77,9 @@ export const AddAppointmentDialog = ({ open, onOpenChange }: AddAppointmentDialo
           appointment_time: "",
           duration_minutes: 30,
           notes: "",
-          is_virtual: false
+          is_virtual: false,
+          reminder_minutes: 30,
+          enable_notifications: true,
         });
         onOpenChange(false);
       }
@@ -88,7 +96,7 @@ export const AddAppointmentDialog = ({ open, onOpenChange }: AddAppointmentDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90%] max-w-md">
+      <DialogContent className="w-[90%] max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Schedule Appointment</DialogTitle>
         </DialogHeader>
@@ -106,55 +114,73 @@ export const AddAppointmentDialog = ({ open, onOpenChange }: AddAppointmentDialo
 
           <div>
             <Label htmlFor="appointment_type">Appointment Type *</Label>
-            <Input
-              id="appointment_type"
+            <Select
               value={formData.appointment_type}
-              onChange={(e) => setFormData({ ...formData, appointment_type: e.target.value })}
-              placeholder="e.g., General Checkup, Consultation"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="appointment_date">Date *</Label>
-              <Input
-                id="appointment_date"
-                type="date"
-                value={formData.appointment_date}
-                onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <div>
-              <Label htmlFor="appointment_time">Time *</Label>
-              <Input
-                id="appointment_time"
-                type="time"
-                value={formData.appointment_time}
-                onChange={(e) => setFormData({ ...formData, appointment_time: e.target.value })}
-              />
-            </div>
+              onValueChange={(value) => setFormData({ ...formData, appointment_type: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select appointment type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="General Checkup">General Checkup</SelectItem>
+                <SelectItem value="Follow-up">Follow-up</SelectItem>
+                <SelectItem value="Consultation">Consultation</SelectItem>
+                <SelectItem value="Emergency">Emergency</SelectItem>
+                <SelectItem value="Specialist">Specialist</SelectItem>
+                <SelectItem value="Lab Results">Lab Results</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
-            <Label htmlFor="duration_minutes">Duration (minutes)</Label>
+            <Label htmlFor="appointment_date">Date *</Label>
             <Input
-              id="duration_minutes"
-              type="number"
-              value={formData.duration_minutes}
-              onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 30 })}
-              min="15"
-              max="240"
+              id="appointment_date"
+              type="date"
+              value={formData.appointment_date}
+              onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
+              min={new Date().toISOString().split('T')[0]}
             />
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div>
+            <Label htmlFor="appointment_time">Time *</Label>
+            <Input
+              id="appointment_time"
+              type="time"
+              value={formData.appointment_time}
+              onChange={(e) => setFormData({ ...formData, appointment_time: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="duration">Duration</Label>
+            <Select
+              value={formData.duration_minutes.toString()}
+              onValueChange={(value) => setFormData({ ...formData, duration_minutes: parseInt(value) })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="15">15 minutes</SelectItem>
+                <SelectItem value="30">30 minutes</SelectItem>
+                <SelectItem value="45">45 minutes</SelectItem>
+                <SelectItem value="60">1 hour</SelectItem>
+                <SelectItem value="90">1.5 hours</SelectItem>
+                <SelectItem value="120">2 hours</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="is_virtual">Virtual Appointment</Label>
             <Switch
               id="is_virtual"
               checked={formData.is_virtual}
               onCheckedChange={(checked) => setFormData({ ...formData, is_virtual: checked })}
             />
-            <Label htmlFor="is_virtual">Virtual Appointment</Label>
           </div>
 
           <div>
@@ -163,9 +189,45 @@ export const AddAppointmentDialog = ({ open, onOpenChange }: AddAppointmentDialo
               id="notes"
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Any additional notes or symptoms"
+              placeholder="Any additional notes..."
               rows={3}
             />
+          </div>
+
+          {/* Notification Settings */}
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="font-medium text-care-blue">Reminder Settings</h3>
+            
+            <div className="flex items-center justify-between">
+              <Label htmlFor="enable_notifications">Enable Reminder</Label>
+              <Switch
+                id="enable_notifications"
+                checked={formData.enable_notifications}
+                onCheckedChange={(checked) => setFormData({ ...formData, enable_notifications: checked })}
+              />
+            </div>
+
+            {formData.enable_notifications && (
+              <div>
+                <Label htmlFor="reminder_minutes">Remind me (minutes before)</Label>
+                <Select
+                  value={formData.reminder_minutes.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, reminder_minutes: parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 minutes</SelectItem>
+                    <SelectItem value="15">15 minutes</SelectItem>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="60">1 hour</SelectItem>
+                    <SelectItem value="120">2 hours</SelectItem>
+                    <SelectItem value="1440">1 day</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">
