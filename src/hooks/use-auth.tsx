@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName?: string, additionalData?: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -87,17 +87,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string, additionalData?: any) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName || '',
+            ...additionalData
           }
         }
       });
@@ -109,10 +110,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           variant: "destructive",
         });
       } else {
-        toast({
-          title: "Check your email",
-          description: "We've sent you a confirmation link to complete your registration.",
-        });
+        // If user is confirmed immediately, update their profile with additional data
+        if (data.user && !data.user.email_confirmed_at) {
+          toast({
+            title: "Check your email",
+            description: "We've sent you a confirmation link to complete your registration.",
+          });
+        } else if (data.user && additionalData) {
+          // Update profile with additional data if user is confirmed immediately
+          setTimeout(async () => {
+            await supabase
+              .from('profiles')
+              .update(additionalData)
+              .eq('id', data.user.id);
+          }, 0);
+        }
       }
       
       return { error };
