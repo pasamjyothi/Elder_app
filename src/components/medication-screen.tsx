@@ -11,10 +11,12 @@ import {
   Check,
   Trash2,
   CheckCircle,
-  XCircle
+  XCircle,
+  Bell
 } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
 import { AddMedicationDialog } from "./add-medication-dialog";
+import { MedicationAlarmOverlay } from "./medication-alarm-overlay";
 import { toast } from "sonner";
 
 interface MedicationScreenProps {
@@ -97,22 +99,29 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
               {medications.map((med) => {
                 const takenToday = isMedicationTakenToday(med.last_taken);
                 return (
-                  <Card key={med.id} className={`p-4 transition-all ${
+                  <Card key={med.id} className={`p-4 transition-all duration-300 ${
                     takenToday 
-                      ? 'border-care-green bg-care-green/5' 
-                      : 'border-care-orange bg-care-orange/5'
+                      ? 'border-care-green bg-care-green/5 shadow-sm' 
+                      : 'border-care-orange bg-care-orange/5 shadow-md'
                   }`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
                           takenToday 
-                            ? 'bg-care-green text-white' 
-                            : 'bg-care-orange text-white'
+                            ? 'bg-care-green text-white shadow-lg' 
+                            : 'bg-care-orange text-white shadow-lg animate-pulse'
                         }`}>
-                          {takenToday ? <CheckCircle className="h-6 w-6" /> : <Pill className="h-6 w-6" />}
+                          {takenToday ? <CheckCircle className="h-6 w-6" /> : <Bell className="h-6 w-6" />}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium">{med.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{med.name}</p>
+                            {!takenToday && (
+                              <span className="text-xs bg-care-orange text-white px-2 py-1 rounded-full animate-pulse">
+                                PENDING
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-care-gray">{med.dosage} • {med.frequency}</p>
                           {med.instructions && (
                             <p className="text-xs text-care-gray mt-1">{med.instructions}</p>
@@ -131,26 +140,25 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
                       </div>
                       
                       <div className="flex flex-col gap-2">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
+                        <span className={`text-xs px-3 py-1 rounded-full font-medium ${
                           takenToday 
-                            ? 'bg-care-green/20 text-care-green' 
-                            : 'bg-care-orange/20 text-care-orange'
+                            ? 'bg-care-green text-white shadow-sm' 
+                            : 'bg-care-orange text-white shadow-sm animate-pulse'
                         }`}>
-                          {takenToday ? 'Taken Today' : 'Not Taken'}
+                          {takenToday ? '✓ COMPLETED TODAY' : '⏰ NOT TAKEN'}
                         </span>
                         
                         <div className="flex gap-1">
                           <Button
                             size="sm"
-                            variant="ghost"
-                            className={`h-8 w-8 p-0 ${
+                            className={`h-8 px-3 text-xs font-medium ${
                               takenToday 
-                                ? 'text-care-orange hover:bg-care-orange/20' 
-                                : 'text-care-green hover:bg-care-green/20'
+                                ? 'bg-care-orange hover:bg-care-orange/90 text-white' 
+                                : 'bg-care-green hover:bg-care-green/90 text-white'
                             }`}
                             onClick={() => handleMarkTaken(med.id, !takenToday)}
                           >
-                            {takenToday ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                            {takenToday ? 'Mark Not Taken' : 'Mark as Taken'}
                           </Button>
                           
                           <Button
@@ -189,6 +197,7 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
       </div>
       
       <AddMedicationDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
+      <MedicationAlarmOverlay />
     </MobileContainer>
   );
 };

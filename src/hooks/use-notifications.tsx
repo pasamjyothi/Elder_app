@@ -27,6 +27,13 @@ export const useNotifications = () => {
     default: true
   });
   const [scheduledNotifications, setScheduledNotifications] = useState<ScheduledNotification[]>([]);
+  const [activeAlarm, setActiveAlarm] = useState<{
+    id: string;
+    type: 'medication' | 'appointment';
+    title: string;
+    message: string;
+    audioContext?: AudioContext;
+  } | null>(null);
 
   // Request notification permission
   const requestPermission = useCallback(async () => {
@@ -52,10 +59,21 @@ export const useNotifications = () => {
     }
   }, []);
 
-  // Play continuous alarm sound
-  const playNotificationSound = useCallback(() => {
+  // Play continuous alarm sound with dismiss capability
+  const playNotificationSound = useCallback((medicationId?: string, medicationName?: string) => {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Set active alarm state
+      if (medicationId && medicationName) {
+        setActiveAlarm({
+          id: medicationId,
+          type: 'medication',
+          title: 'Medication Reminder',
+          message: `Time to take ${medicationName}`,
+          audioContext
+        });
+      }
       
       // Create continuous alarm with multiple frequencies
       const playBuzzSequence = (startTime: number, duration: number) => {
@@ -81,19 +99,33 @@ export const useNotifications = () => {
         oscillator.stop(startTime + duration);
       };
       
-      // Play continuous alarm for 5 seconds
+      // Play continuous alarm for 10 seconds (20 buzz sequences)
       const now = audioContext.currentTime;
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 20; i++) {
         playBuzzSequence(now + (i * 0.5), 0.4);
       }
+      
+      // Auto dismiss after 10 seconds
+      setTimeout(() => {
+        setActiveAlarm(null);
+        audioContext.close();
+      }, 10000);
       
     } catch (error) {
       console.error('Error playing notification sound:', error);
     }
   }, []);
 
-  // Show notification
-  const showNotification = useCallback((title: string, message: string, soundAlert = true) => {
+  // Dismiss active alarm
+  const dismissAlarm = useCallback(() => {
+    if (activeAlarm?.audioContext) {
+      activeAlarm.audioContext.close();
+    }
+    setActiveAlarm(null);
+  }, [activeAlarm]);
+
+  // Show notification with enhanced alarm
+  const showNotification = useCallback((title: string, message: string, soundAlert = true, medicationId?: string) => {
     if (!permission.granted) return;
 
     const notification = new Notification(title, {
@@ -104,18 +136,19 @@ export const useNotifications = () => {
       requireInteraction: true,
     });
 
-    if (soundAlert) {
-      playNotificationSound();
+    if (soundAlert && medicationId) {
+      const medicationName = message.match(/take (.+?) \(/)?.[1] || 'your medication';
+      playNotificationSound(medicationId, medicationName);
     }
 
-    // Auto close after 10 seconds
+    // Auto close after 15 seconds
     setTimeout(() => {
       notification.close();
-    }, 10000);
+    }, 15000);
 
     // Also show toast
     toast.info(`${title}: ${message}`, {
-      duration: 10000,
+      duration: 15000,
     });
 
     return notification;
@@ -148,7 +181,8 @@ export const useNotifications = () => {
             showNotification(
               'Medication Reminder',
               `Time to take ${medication.name} (${medication.dosage})`,
-              medication.sound_alert
+              medication.sound_alert,
+              medication.id
             );
           }, timeUntilNotification);
         }
@@ -206,6 +240,8 @@ export const useNotifications = () => {
     requestPermission,
     showNotification,
     playNotificationSound,
+    dismissAlarm,
+    activeAlarm,
     scheduledNotifications,
   };
 };
