@@ -75,6 +75,7 @@ export type Database = {
           id: string
           instructions: string | null
           is_active: boolean | null
+          last_taken: string | null
           name: string
           reminder_times: string[] | null
           sound_alert: boolean | null
@@ -91,6 +92,7 @@ export type Database = {
           id?: string
           instructions?: string | null
           is_active?: boolean | null
+          last_taken?: string | null
           name: string
           reminder_times?: string[] | null
           sound_alert?: boolean | null
@@ -107,6 +109,7 @@ export type Database = {
           id?: string
           instructions?: string | null
           is_active?: boolean | null
+          last_taken?: string | null
           name?: string
           reminder_times?: string[] | null
           sound_alert?: boolean | null
