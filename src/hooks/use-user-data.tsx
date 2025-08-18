@@ -29,6 +29,7 @@ export interface Medication {
   reminder_times?: string[];
   enable_notifications?: boolean;
   sound_alert?: boolean;
+  last_taken?: string;
 }
 
 export interface Appointment {
@@ -189,6 +190,56 @@ export const useUserData = () => {
     }
   };
 
+  const deleteMedication = async (medicationId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('medications')
+        .delete()
+        .eq('id', medicationId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error deleting medication:', error);
+        return { error };
+      }
+
+      setMedications(prev => prev.filter(med => med.id !== medicationId));
+      return { error: null };
+    } catch (error) {
+      console.error('Error deleting medication:', error);
+      return { error };
+    }
+  };
+
+  const markMedicationTaken = async (medicationId: string, taken: boolean) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('medications')
+        .update({ last_taken: taken ? new Date().toISOString() : null })
+        .eq('id', medicationId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating medication:', error);
+        return { error };
+      }
+
+      setMedications(prev => prev.map(med => 
+        med.id === medicationId ? { ...med, last_taken: data.last_taken } : med
+      ));
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating medication:', error);
+      return { error };
+    }
+  };
+
   return {
     profile,
     medications,
@@ -197,6 +248,8 @@ export const useUserData = () => {
     addMedication,
     addAppointment,
     updateProfile,
+    deleteMedication,
+    markMedicationTaken,
     refetchData: fetchUserData,
   };
 };

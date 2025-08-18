@@ -52,57 +52,40 @@ export const useNotifications = () => {
     }
   }, []);
 
-  // Play notification sound
+  // Play continuous alarm sound
   const playNotificationSound = useCallback(() => {
     try {
-      // Create audio context for buzz sound
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      // Create oscillator for buzz sound
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+      // Create continuous alarm with multiple frequencies
+      const playBuzzSequence = (startTime: number, duration: number) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Alarm-like frequency pattern
+        oscillator.frequency.setValueAtTime(200, startTime);
+        oscillator.frequency.setValueAtTime(150, startTime + 0.1);
+        oscillator.frequency.setValueAtTime(200, startTime + 0.2);
+        oscillator.type = 'square';
+        
+        // Volume envelope for buzzing effect
+        gainNode.gain.setValueAtTime(0.4, startTime);
+        gainNode.gain.setValueAtTime(0.1, startTime + 0.1);
+        gainNode.gain.setValueAtTime(0.4, startTime + 0.2);
+        gainNode.gain.setValueAtTime(0.01, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // Configure buzz sound (low frequency for buzz effect)
-      oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
-      oscillator.type = 'square';
-      
-      // Configure volume and duration
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
-      
-      // Play the sound
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 1);
-      
-      // Repeat buzz 3 times
-      setTimeout(() => {
-        const oscillator2 = audioContext.createOscillator();
-        const gainNode2 = audioContext.createGain();
-        oscillator2.connect(gainNode2);
-        gainNode2.connect(audioContext.destination);
-        oscillator2.frequency.setValueAtTime(150, audioContext.currentTime);
-        oscillator2.type = 'square';
-        gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        oscillator2.start(audioContext.currentTime);
-        oscillator2.stop(audioContext.currentTime + 0.5);
-      }, 200);
-      
-      setTimeout(() => {
-        const oscillator3 = audioContext.createOscillator();
-        const gainNode3 = audioContext.createGain();
-        oscillator3.connect(gainNode3);
-        gainNode3.connect(audioContext.destination);
-        oscillator3.frequency.setValueAtTime(150, audioContext.currentTime);
-        oscillator3.type = 'square';
-        gainNode3.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode3.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        oscillator3.start(audioContext.currentTime);
-        oscillator3.stop(audioContext.currentTime + 0.5);
-      }, 400);
+      // Play continuous alarm for 5 seconds
+      const now = audioContext.currentTime;
+      for (let i = 0; i < 10; i++) {
+        playBuzzSequence(now + (i * 0.5), 0.4);
+      }
       
     } catch (error) {
       console.error('Error playing notification sound:', error);

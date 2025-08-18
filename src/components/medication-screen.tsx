@@ -8,18 +8,49 @@ import {
   Pill, 
   Clock, 
   Calendar,
-  Check
+  Check,
+  Trash2,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
 import { AddMedicationDialog } from "./add-medication-dialog";
+import { toast } from "sonner";
 
 interface MedicationScreenProps {
   onBack: () => void;
 }
 
 export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
-  const { medications, loading } = useUserData();
+  const { medications, loading, deleteMedication, markMedicationTaken } = useUserData();
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const handleDeleteMedication = async (medicationId: string, medicationName: string) => {
+    if (window.confirm(`Are you sure you want to delete ${medicationName}?`)) {
+      const result = await deleteMedication(medicationId);
+      if (!result?.error) {
+        toast.success("Medication deleted successfully");
+      } else {
+        toast.error("Failed to delete medication");
+      }
+    }
+  };
+
+  const handleMarkTaken = async (medicationId: string, taken: boolean) => {
+    const result = await markMedicationTaken(medicationId, taken);
+    if (!result?.error) {
+      toast.success(taken ? "Marked as taken" : "Marked as not taken");
+    } else {
+      toast.error("Failed to update medication status");
+    }
+  };
+
+  const isMedicationTakenToday = (lastTaken?: string) => {
+    if (!lastTaken) return false;
+    const takenDate = new Date(lastTaken);
+    const today = new Date();
+    return takenDate.toDateString() === today.toDateString();
+  };
 
   return (
     <MobileContainer>
@@ -63,40 +94,79 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
             </Card>
           ) : (
             <div className="space-y-4">
-              {medications.map((med) => (
-                <Card key={med.id} className={`p-4 ${med.is_active ? 'border-care-green/30' : 'border-care-gray/30'}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        med.is_active ? 'bg-care-green text-white' : 'bg-care-gray/20 text-care-gray'
-                      }`}>
-                        <Pill className="h-6 w-6" />
+              {medications.map((med) => {
+                const takenToday = isMedicationTakenToday(med.last_taken);
+                return (
+                  <Card key={med.id} className={`p-4 transition-all ${
+                    takenToday 
+                      ? 'border-care-green bg-care-green/5' 
+                      : 'border-care-orange bg-care-orange/5'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                          takenToday 
+                            ? 'bg-care-green text-white' 
+                            : 'bg-care-orange text-white'
+                        }`}>
+                          {takenToday ? <CheckCircle className="h-6 w-6" /> : <Pill className="h-6 w-6" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{med.name}</p>
+                          <p className="text-sm text-care-gray">{med.dosage} • {med.frequency}</p>
+                          {med.instructions && (
+                            <p className="text-xs text-care-gray mt-1">{med.instructions}</p>
+                          )}
+                          <div className="flex items-center text-xs text-care-gray mt-1">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Started: {new Date(med.start_date).toLocaleDateString()}
+                          </div>
+                          {med.reminder_times && med.reminder_times.length > 0 && (
+                            <div className="flex items-center text-xs text-care-gray mt-1">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              Reminders: {med.reminder_times.join(', ')}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{med.name}</p>
-                        <p className="text-sm text-care-gray">{med.dosage} • {med.frequency}</p>
-                        {med.instructions && (
-                          <p className="text-xs text-care-gray mt-1">{med.instructions}</p>
-                        )}
-                        <div className="flex items-center text-xs text-care-gray mt-1">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Started: {new Date(med.start_date).toLocaleDateString()}
+                      
+                      <div className="flex flex-col gap-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          takenToday 
+                            ? 'bg-care-green/20 text-care-green' 
+                            : 'bg-care-orange/20 text-care-orange'
+                        }`}>
+                          {takenToday ? 'Taken Today' : 'Not Taken'}
+                        </span>
+                        
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className={`h-8 w-8 p-0 ${
+                              takenToday 
+                                ? 'text-care-orange hover:bg-care-orange/20' 
+                                : 'text-care-green hover:bg-care-green/20'
+                            }`}
+                            onClick={() => handleMarkTaken(med.id, !takenToday)}
+                          >
+                            {takenToday ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                          </Button>
+                          
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive/20"
+                            onClick={() => handleDeleteMedication(med.id, med.name)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="text-right">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        med.is_active 
-                          ? 'bg-care-green/20 text-care-green' 
-                          : 'bg-care-gray/20 text-care-gray'
-                      }`}>
-                        {med.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

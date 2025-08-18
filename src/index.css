@@ -41,7 +41,11 @@ All colors MUST be HSL.
     --care-blue-dark: 210 83% 45%;
     --care-blue-light: 210 83% 95%;
     --care-green: 142 71% 45%;
+    --care-green-light: 142 71% 95%;
     --care-orange: 25 95% 53%;
+    --care-orange-light: 25 95% 95%;
+    --care-red: 0 84% 60%;
+    --care-red-light: 0 84% 95%;
     --care-gray: 215 16% 47%;
     --care-gray-light: 210 40% 98%;
 
