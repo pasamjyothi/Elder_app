@@ -20,6 +20,7 @@ import { MedicationScreen } from "./medication-screen";
 import { AppointmentScreen } from "./appointment-screen";
 import { ProfileScreen } from "./profile-screen";
 import { AddScheduleDialog } from "./add-schedule-dialog";
+import { BottomNavigation } from "./bottom-navigation";
 
 export const MainDashboard = () => {
   const [activeScreen, setActiveScreen] = useState<"dashboard" | "medications" | "appointments" | "profile">("dashboard");
@@ -53,15 +54,33 @@ export const MainDashboard = () => {
   }, [medications, appointments, profile]);
 
   if (activeScreen === "medications") {
-    return <MedicationScreen onBack={() => setActiveScreen("dashboard")} />;
+    return (
+      <MedicationScreen 
+        onBack={() => setActiveScreen("dashboard")} 
+        onNavigate={setActiveScreen}
+        activeScreen={activeScreen}
+      />
+    );
   }
 
   if (activeScreen === "appointments") {
-    return <AppointmentScreen onBack={() => setActiveScreen("dashboard")} />;
+    return (
+      <AppointmentScreen 
+        onBack={() => setActiveScreen("dashboard")} 
+        onNavigate={setActiveScreen}
+        activeScreen={activeScreen}
+      />
+    );
   }
 
   if (activeScreen === "profile") {
-    return <ProfileScreen onBack={() => setActiveScreen("dashboard")} />;
+    return (
+      <ProfileScreen 
+        onBack={() => setActiveScreen("dashboard")} 
+        onNavigate={setActiveScreen}
+        activeScreen={activeScreen}
+      />
+    );
   }
   return (
     <MobileContainer>
@@ -305,41 +324,7 @@ export const MainDashboard = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t p-4">
-        <div className="flex justify-around">
-          <Button variant="ghost" size="sm" className="flex-col space-y-1 text-care-blue">
-            <Activity className="h-5 w-5" />
-            <span className="text-xs">Dashboard</span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="flex-col space-y-1 text-care-gray"
-            onClick={() => setActiveScreen("appointments")}
-          >
-            <Calendar className="h-5 w-5" />
-            <span className="text-xs">Schedule</span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="flex-col space-y-1 text-care-gray"
-            onClick={() => setActiveScreen("medications")}
-          >
-            <Pill className="h-5 w-5" />
-            <span className="text-xs">Meds</span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="flex-col space-y-1 text-care-gray"
-            onClick={() => setActiveScreen("profile")}
-          >
-            <User className="h-5 w-5" />
-            <span className="text-xs">Profile</span>
-          </Button>
-        </div>
-      </div>
+      <BottomNavigation activeScreen={activeScreen} onNavigate={setActiveScreen} />
     </MobileContainer>
   );
 };

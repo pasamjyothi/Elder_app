@@ -13,12 +13,16 @@ import {
 } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
 import { AddAppointmentDialog } from "./add-appointment-dialog";
+import { AddScheduleDialog } from "./add-schedule-dialog";
+import { BottomNavigation } from "./bottom-navigation";
 
 interface AppointmentScreenProps {
   onBack: () => void;
+  onNavigate: (screen: "dashboard" | "medications" | "appointments" | "profile") => void;
+  activeScreen: "dashboard" | "medications" | "appointments" | "profile";
 }
 
-export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
+export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: AppointmentScreenProps) => {
   const { appointments, loading } = useUserData();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "virtual" | "in-person">("all");
@@ -47,10 +51,13 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
             </p>
             <p className="text-2xl font-bold">{filteredAppointments.length} appointments</p>
           </div>
-          <Button className="bg-white/20 hover:bg-white/30 text-white" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Book
-          </Button>
+          <div className="flex gap-2">
+            <AddScheduleDialog onScheduleAdded={() => {}} />
+            <Button className="bg-white/20 hover:bg-white/30 text-white" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Book
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -91,7 +98,7 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
       </div>
 
       {/* Appointments List */}
-      <div className="px-6">
+      <div className="px-6 pb-24">
         {loading ? (
           <p className="text-care-gray">Loading appointments...</p>
         ) : filteredAppointments.length === 0 ? (
@@ -212,6 +219,8 @@ export const AppointmentScreen = ({ onBack }: AppointmentScreenProps) => {
       </div>
       
       <AddAppointmentDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
+      
+      <BottomNavigation activeScreen={activeScreen} onNavigate={onNavigate} />
     </MobileContainer>
   );
 };

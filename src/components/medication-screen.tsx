@@ -17,13 +17,17 @@ import {
 import { useUserData } from "@/hooks/use-user-data";
 import { AddMedicationDialog } from "./add-medication-dialog";
 import { MedicationAlarmOverlay } from "./medication-alarm-overlay";
+import { AddScheduleDialog } from "./add-schedule-dialog";
+import { BottomNavigation } from "./bottom-navigation";
 import { toast } from "sonner";
 
 interface MedicationScreenProps {
   onBack: () => void;
+  onNavigate: (screen: "dashboard" | "medications" | "appointments" | "profile") => void;
+  activeScreen: "dashboard" | "medications" | "appointments" | "profile";
 }
 
-export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
+export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: MedicationScreenProps) => {
   const { medications, loading, deleteMedication, markMedicationTaken } = useUserData();
   const [showAddDialog, setShowAddDialog] = useState(false);
 
@@ -70,15 +74,18 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
             <p className="text-blue-100">Active Medications</p>
             <p className="text-2xl font-bold">{medications.length} total</p>
           </div>
-          <Button className="bg-white/20 hover:bg-white/30 text-white" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Med
-          </Button>
+          <div className="flex gap-2">
+            <AddScheduleDialog onScheduleAdded={() => {}} />
+            <Button className="bg-white/20 hover:bg-white/30 text-white" onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Med
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Medications List */}
-      <div className="p-6">
+      <div className="px-6 pb-24">
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-4">Your Medications</h2>
           
@@ -204,6 +211,8 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
       
       <AddMedicationDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
       <MedicationAlarmOverlay />
+      
+      <BottomNavigation activeScreen={activeScreen} onNavigate={onNavigate} />
     </MobileContainer>
   );
 };

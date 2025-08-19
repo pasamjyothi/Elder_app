@@ -20,13 +20,17 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserData } from "@/hooks/use-user-data";
+import { AddScheduleDialog } from "./add-schedule-dialog";
+import { BottomNavigation } from "./bottom-navigation";
 import { toast } from "sonner";
 
 interface ProfileScreenProps {
   onBack: () => void;
+  onNavigate: (screen: "dashboard" | "medications" | "appointments" | "profile") => void;
+  activeScreen: "dashboard" | "medications" | "appointments" | "profile";
 }
 
-export const ProfileScreen = ({ onBack }: ProfileScreenProps) => {
+export const ProfileScreen = ({ onBack, onNavigate, activeScreen }: ProfileScreenProps) => {
   const { user } = useAuth();
   const { profile, updateProfile, loading } = useUserData();
   const [isEditing, setIsEditing] = useState(false);
@@ -115,14 +119,17 @@ export const ProfileScreen = ({ onBack }: ProfileScreenProps) => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-semibold">Profile</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={isEditing ? handleSave : () => setIsEditing(true)}
-            className="text-white hover:bg-white/20"
-          >
-            {isEditing ? <Save className="h-5 w-5" /> : <Edit className="h-5 w-5" />}
-          </Button>
+          <div className="flex gap-2">
+            <AddScheduleDialog onScheduleAdded={() => {}} />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={isEditing ? handleSave : () => setIsEditing(true)}
+              className="text-white hover:bg-white/20"
+            >
+              {isEditing ? <Save className="h-5 w-5" /> : <Edit className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
         
         <div className="flex flex-col items-center">
@@ -134,7 +141,7 @@ export const ProfileScreen = ({ onBack }: ProfileScreenProps) => {
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 pb-24">
         {/* Personal Information */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
@@ -311,6 +318,8 @@ export const ProfileScreen = ({ onBack }: ProfileScreenProps) => {
           </div>
         </Card>
       </div>
+      
+      <BottomNavigation activeScreen={activeScreen} onNavigate={onNavigate} />
     </MobileContainer>
   );
 };
