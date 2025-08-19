@@ -140,23 +140,39 @@ export const MainDashboard = () => {
               <p className="text-care-gray">Loading...</p>
             ) : (
               <>
-                {medications.slice(0, 2).map((medication) => (
-                  <Card key={medication.id} className="p-4 border-l-4 border-l-care-green">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{medication.name}</p>
-                        <p className="text-sm text-care-gray">{medication.dosage} - {medication.frequency}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">Active</p>
-                        <div className="flex items-center text-xs text-care-green">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Daily
+                {medications.slice(0, 2).map((medication) => {
+                  const formatTime = (time: string) => {
+                    const [hours, minutes] = time.split(':');
+                    const hour24 = parseInt(hours);
+                    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+                    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+                    return `${hour12}:${minutes} ${ampm}`;
+                  };
+                  
+                  return (
+                    <Card key={medication.id} className="p-4 border-l-4 border-l-care-green">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{medication.name}</p>
+                          <p className="text-sm text-care-gray">{medication.dosage} - {medication.frequency}</p>
+                          {medication.reminder_times && medication.reminder_times.length > 0 && (
+                            <div className="flex items-center text-xs text-care-blue mt-1">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {medication.reminder_times.map(time => formatTime(time)).join(', ')}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-care-green">Active</p>
+                          <div className="flex items-center text-xs text-care-green">
+                            <Bell className="h-3 w-3 mr-1" />
+                            {medication.enable_notifications ? 'Alerts On' : 'Silent'}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
                 
                 {appointments.slice(0, 1).map((appointment) => (
                   <Card key={appointment.id} className="p-4 border-l-4 border-l-care-orange">
@@ -193,15 +209,21 @@ export const MainDashboard = () => {
         <div>
           <h2 className="text-lg font-semibold mb-4">Health Metrics</h2>
           <div className="grid grid-cols-2 gap-4">
-            <Card className="p-4 text-center">
-              <Activity className="h-8 w-8 text-care-blue mx-auto mb-2" />
-              <p className="text-2xl font-bold">{healthMetrics.steps.toLocaleString()}</p>
-              <p className="text-sm text-care-gray">Steps Today</p>
+            <Card className="p-6 text-center bg-gradient-to-br from-care-blue-light to-white border-care-blue/20">
+              <Activity className="h-10 w-10 text-care-blue mx-auto mb-3" />
+              <p className="text-3xl font-bold text-care-blue">{healthMetrics.steps.toLocaleString()}</p>
+              <p className="text-sm text-care-gray font-medium">Steps Today</p>
+              <div className="mt-2 h-2 bg-care-gray-light rounded-full">
+                <div className="h-2 bg-care-blue rounded-full" style={{ width: `${Math.min((healthMetrics.steps / 10000) * 100, 100)}%` }}></div>
+              </div>
             </Card>
-            <Card className="p-4 text-center">
-              <Heart className="h-8 w-8 text-red-500 mx-auto mb-2" />
-              <p className="text-2xl font-bold">{healthMetrics.heartRate}</p>
-              <p className="text-sm text-care-gray">Heart Rate (BPM)</p>
+            <Card className="p-6 text-center bg-gradient-to-br from-care-red-light to-white border-care-red/20">
+              <Heart className="h-10 w-10 text-care-red mx-auto mb-3" />
+              <p className="text-3xl font-bold text-care-red">{healthMetrics.heartRate}</p>
+              <p className="text-sm text-care-gray font-medium">Heart Rate (BPM)</p>
+              <div className="mt-2 flex justify-center">
+                <div className="w-2 h-2 bg-care-red rounded-full animate-pulse"></div>
+              </div>
             </Card>
           </div>
         </div>

@@ -130,10 +130,16 @@ export const MedicationScreen = ({ onBack }: MedicationScreenProps) => {
                             <Clock className="h-3 w-3 mr-1" />
                             Started: {new Date(med.start_date).toLocaleDateString()}
                           </div>
-                          {med.reminder_times && med.reminder_times.length > 0 && (
-                            <div className="flex items-center text-xs text-care-gray mt-1">
-                              <Calendar className="h-3 w-3 mr-1" />
-                              Reminders: {med.reminder_times.join(', ')}
+                           {med.reminder_times && med.reminder_times.length > 0 && (
+                            <div className="flex items-center text-xs text-care-blue mt-1 font-medium">
+                              <Bell className="h-3 w-3 mr-1" />
+                              Times: {med.reminder_times.map(time => {
+                                const [hours, minutes] = time.split(':');
+                                const hour24 = parseInt(hours);
+                                const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+                                const ampm = hour24 >= 12 ? 'PM' : 'AM';
+                                return `${hour12}:${minutes} ${ampm}`;
+                              }).join(', ')}
                             </div>
                           )}
                         </div>
