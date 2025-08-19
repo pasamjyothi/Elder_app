@@ -11,7 +11,8 @@ import {
   Activity,
   Clock,
   Plus,
-  LogOut
+  LogOut,
+  CheckCircle
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserData } from "@/hooks/use-user-data";
@@ -140,7 +141,7 @@ export const MainDashboard = () => {
               <p className="text-care-gray">Loading...</p>
             ) : (
               <>
-                {medications.slice(0, 2).map((medication) => {
+                {medications.slice(0, 3).map((medication) => {
                   const formatTime = (time: string) => {
                     const [hours, minutes] = time.split(':');
                     const hour24 = parseInt(hours);
@@ -148,56 +149,130 @@ export const MainDashboard = () => {
                     const ampm = hour24 >= 12 ? 'PM' : 'AM';
                     return `${hour12}:${minutes} ${ampm}`;
                   };
+
+                  const isTakenToday = () => {
+                    if (!medication.last_taken) return false;
+                    const takenDate = new Date(medication.last_taken);
+                    const today = new Date();
+                    return takenDate.toDateString() === today.toDateString();
+                  };
+
+                  const taken = isTakenToday();
+                  const statusColor = taken ? 'border-l-care-green' : 'border-l-care-orange';
+                  const statusBg = taken ? 'bg-care-green/5' : 'bg-care-orange/5';
                   
                   return (
-                    <Card key={medication.id} className="p-4 border-l-4 border-l-care-green">
+                    <Card key={medication.id} className={`p-4 border-l-4 ${statusColor} ${statusBg} transition-all duration-300`}>
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{medication.name}</p>
-                          <p className="text-sm text-care-gray">{medication.dosage} - {medication.frequency}</p>
-                          {medication.reminder_times && medication.reminder_times.length > 0 && (
-                            <div className="flex items-center text-xs text-care-blue mt-1">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {medication.reminder_times.map(time => formatTime(time)).join(', ')}
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            taken ? 'bg-care-green text-white' : 'bg-care-orange text-white animate-pulse'
+                          }`}>
+                            {taken ? <CheckCircle className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-lg">{medication.name}</p>
+                              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                taken ? 'bg-care-green text-white' : 'bg-care-orange text-white animate-pulse'
+                              }`}>
+                                {taken ? '✓ TAKEN' : 'PENDING'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-care-gray font-medium">{medication.dosage} • {medication.frequency}</p>
+                            {medication.reminder_times && medication.reminder_times.length > 0 && (
+                              <div className="flex items-center text-sm text-care-blue mt-1 font-medium">
+                                <Clock className="h-4 w-4 mr-1" />
+                                <span className="font-bold">
+                                  {medication.reminder_times.map(time => formatTime(time)).join(', ')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right flex flex-col items-end gap-1">
+                          {medication.enable_notifications && (
+                            <div className="flex items-center text-xs text-care-blue">
+                              <Bell className="h-3 w-3 mr-1" />
+                              {medication.sound_alert ? 'Sound Alert' : 'Silent'}
                             </div>
                           )}
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-care-green">Active</p>
-                          <div className="flex items-center text-xs text-care-green">
-                            <Bell className="h-3 w-3 mr-1" />
-                            {medication.enable_notifications ? 'Alerts On' : 'Silent'}
-                          </div>
+                          <Button
+                            size="sm" 
+                            variant="outline"
+                            className={`h-7 text-xs ${
+                              taken 
+                                ? 'border-care-orange text-care-orange hover:bg-care-orange hover:text-white' 
+                                : 'border-care-green text-care-green hover:bg-care-green hover:text-white'
+                            }`}
+                            onClick={() => setActiveScreen("medications")}
+                          >
+                            {taken ? 'View' : 'Mark Taken'}
+                          </Button>
                         </div>
                       </div>
                     </Card>
                   );
                 })}
                 
-                {appointments.slice(0, 1).map((appointment) => (
-                  <Card key={appointment.id} className="p-4 border-l-4 border-l-care-orange">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{appointment.doctor_name}</p>
-                        <p className="text-sm text-care-gray">{appointment.appointment_type}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">
-                          {new Date(appointment.appointment_date).toLocaleDateString()}
-                        </p>
-                        <div className="flex items-center text-xs text-care-orange">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {appointment.is_virtual ? "Virtual" : "In-person"}
+                {appointments.slice(0, 1).map((appointment) => {
+                  const appointmentDate = new Date(appointment.appointment_date);
+                  const formatAppointmentTime = (date: Date) => {
+                    const hours = date.getHours();
+                    const minutes = date.getMinutes();
+                    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+                  };
+
+                  return (
+                    <Card key={appointment.id} className="p-4 border-l-4 border-l-care-blue bg-care-blue/5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-care-blue text-white rounded-full flex items-center justify-center">
+                            <Calendar className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-lg">Dr. {appointment.doctor_name}</p>
+                            <p className="text-sm text-care-gray font-medium">{appointment.appointment_type}</p>
+                            <div className="flex items-center text-sm text-care-blue mt-1">
+                              <Clock className="h-4 w-4 mr-1" />
+                              <span className="font-bold">
+                                {appointmentDate.toLocaleDateString()} at {formatAppointmentTime(appointmentDate)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right flex flex-col items-end gap-1">
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                            appointment.is_virtual 
+                              ? 'bg-care-green text-white' 
+                              : 'bg-care-blue text-white'
+                          }`}>
+                            {appointment.is_virtual ? 'Virtual' : 'In-Person'}
+                          </span>
+                          <Button
+                            size="sm" 
+                            variant="outline"
+                            className="h-7 text-xs border-care-blue text-care-blue hover:bg-care-blue hover:text-white"
+                            onClick={() => setActiveScreen("appointments")}
+                          >
+                            View Details
+                          </Button>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
                 
                 {medications.length === 0 && appointments.length === 0 && (
-                  <Card className="p-4 text-center">
-                    <p className="text-care-gray">No scheduled items today</p>
-                    <p className="text-sm text-care-gray mt-2">Add medications or appointments to get started</p>
+                  <Card className="p-6 text-center bg-care-gray-light">
+                    <div className="w-16 h-16 bg-care-gray/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="h-8 w-8 text-care-gray" />
+                    </div>
+                    <p className="text-care-gray font-medium mb-2">No scheduled items today</p>
+                    <p className="text-sm text-care-gray mb-4">Add medications or appointments to get started</p>
+                    <AddScheduleDialog onScheduleAdded={refetchData} />
                   </Card>
                 )}
               </>
