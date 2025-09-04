@@ -14,6 +14,7 @@ import {
 import { useUserData } from "@/hooks/use-user-data";
 import { AddAppointmentDialog } from "./add-appointment-dialog";
 import { AddScheduleDialog } from "./add-schedule-dialog";
+import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
 
 interface AppointmentScreenProps {
@@ -99,6 +100,12 @@ export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: Appointm
 
       {/* Appointments List */}
       <div className="px-6 pb-24">
+        {/* Add to Schedule Form */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-4">Add to Schedule</h2>
+          <AddScheduleForm onScheduleAdded={() => {}} />
+        </div>
+
         {loading ? (
           <p className="text-care-gray">Loading appointments...</p>
         ) : filteredAppointments.length === 0 ? (

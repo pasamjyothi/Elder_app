@@ -18,6 +18,7 @@ import { useUserData } from "@/hooks/use-user-data";
 import { AddMedicationDialog } from "./add-medication-dialog";
 import { MedicationAlarmOverlay } from "./medication-alarm-overlay";
 import { AddScheduleDialog } from "./add-schedule-dialog";
+import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
 import { toast } from "sonner";
 
@@ -86,6 +87,12 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
 
       {/* Medications List */}
       <div className="px-6 pb-24">
+        {/* Add to Schedule Form */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-4">Add to Schedule</h2>
+          <AddScheduleForm onScheduleAdded={() => {}} />
+        </div>
+        
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-4">Your Medications</h2>
           

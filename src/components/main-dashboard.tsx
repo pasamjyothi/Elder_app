@@ -20,6 +20,7 @@ import { MedicationScreen } from "./medication-screen";
 import { AppointmentScreen } from "./appointment-screen";
 import { ProfileScreen } from "./profile-screen";
 import { AddScheduleDialog } from "./add-schedule-dialog";
+import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
 
 export const MainDashboard = () => {
@@ -148,11 +149,16 @@ export const MainDashboard = () => {
           </Button>
         </div>
 
+        {/* Add to Schedule Form */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-4">Add to Schedule</h2>
+          <AddScheduleForm onScheduleAdded={refetchData} />
+        </div>
+
         {/* Today's Schedule */}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Today's Schedule</h2>
-            <AddScheduleDialog onScheduleAdded={refetchData} />
           </div>
 
           <div className="space-y-3">

@@ -21,6 +21,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useUserData } from "@/hooks/use-user-data";
 import { AddScheduleDialog } from "./add-schedule-dialog";
+import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
 import { toast } from "sonner";
 
@@ -142,6 +143,12 @@ export const ProfileScreen = ({ onBack, onNavigate, activeScreen }: ProfileScree
       </div>
 
       <div className="p-6 space-y-6 pb-24">
+        {/* Add to Schedule Form */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-4">Add to Schedule</h2>
+          <AddScheduleForm onScheduleAdded={() => {}} />
+        </div>
+
         {/* Personal Information */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
