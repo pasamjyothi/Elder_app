@@ -86,6 +86,7 @@ export const AddScheduleForm = ({ onScheduleAdded }: AddScheduleFormProps) => {
       if (type === "medication") {
         if (!medicationData.name || !medicationData.dosage) {
           toast.error("Please fill in all required fields");
+          setLoading(false);
           return;
         }
         
@@ -99,6 +100,7 @@ export const AddScheduleForm = ({ onScheduleAdded }: AddScheduleFormProps) => {
       } else {
         if (!appointmentData.doctor_name || !appointmentData.appointment_type || !appointmentData.appointment_date) {
           toast.error("Please fill in all required fields");
+          setLoading(false);
           return;
         }
         
