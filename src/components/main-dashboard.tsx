@@ -25,8 +25,30 @@ import { BottomNavigation } from "./bottom-navigation";
 
 export const MainDashboard = () => {
   const [activeScreen, setActiveScreen] = useState<"dashboard" | "medications" | "appointments" | "profile">("dashboard");
+  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const { signOut, user } = useAuth();
-  const { profile, medications, appointments, loading, refetchData } = useUserData();
+  const { profile, medications, appointments, loading, refetchData, markMedicationTaken } = useUserData();
+
+  const handleMarkComplete = async (itemId: string, itemType: 'medication' | 'appointment') => {
+    if (itemType === 'medication') {
+      const isCurrentlyTaken = isMedicationTakenToday(itemId) || completedItems.has(itemId);
+      if (!isCurrentlyTaken) {
+        setCompletedItems(prev => new Set([...prev, itemId]));
+        // Also update in the database
+        await markMedicationTaken(itemId, true);
+      }
+    } else {
+      setCompletedItems(prev => new Set([...prev, itemId]));
+    }
+  };
+
+  const isMedicationTakenToday = (medicationId: string) => {
+    const medication = medications.find(m => m.id === medicationId);
+    if (!medication?.last_taken) return false;
+    const takenDate = new Date(medication.last_taken);
+    const today = new Date();
+    return takenDate.toDateString() === today.toDateString();
+  };
 
   // Calculate health metrics based on real data
   const healthMetrics = useMemo(() => {
@@ -175,23 +197,16 @@ export const MainDashboard = () => {
                     return `${hour12}:${minutes} ${ampm}`;
                   };
 
-                  const isTakenToday = () => {
-                    if (!medication.last_taken) return false;
-                    const takenDate = new Date(medication.last_taken);
-                    const today = new Date();
-                    return takenDate.toDateString() === today.toDateString();
-                  };
-
-                  const taken = isTakenToday();
-                  const statusColor = taken ? 'border-l-care-green' : 'border-l-care-orange';
-                  const statusBg = taken ? 'bg-care-green/5' : 'bg-care-orange/5';
+                  const taken = isMedicationTakenToday(medication.id) || completedItems.has(medication.id);
+                  const statusColor = taken ? 'border-l-green-500' : 'border-l-care-orange';
+                  const statusBg = taken ? 'bg-green-50' : 'bg-care-orange/5';
                   
                   return (
                     <Card key={medication.id} className={`p-4 border-l-4 ${statusColor} ${statusBg} transition-all duration-300`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            taken ? 'bg-care-green text-white' : 'bg-care-orange text-white animate-pulse'
+                            taken ? 'bg-green-500 text-white' : 'bg-care-orange text-white animate-pulse'
                           }`}>
                             {taken ? <CheckCircle className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
                           </div>
@@ -199,9 +214,9 @@ export const MainDashboard = () => {
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-lg">{medication.name}</p>
                               <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                taken ? 'bg-care-green text-white' : 'bg-care-orange text-white animate-pulse'
+                                taken ? 'bg-green-500 text-white' : 'bg-care-orange text-white animate-pulse'
                               }`}>
-                                {taken ? '✓ TAKEN' : 'PENDING'}
+                                {taken ? '✓ COMPLETED' : 'PENDING'}
                               </span>
                             </div>
                             <p className="text-sm text-care-gray font-medium">{medication.dosage} • {medication.frequency}</p>
@@ -227,12 +242,12 @@ export const MainDashboard = () => {
                             variant="outline"
                             className={`h-7 text-xs ${
                               taken 
-                                ? 'border-care-orange text-care-orange hover:bg-care-orange hover:text-white' 
+                                ? 'border-green-500 text-green-500 bg-green-50' 
                                 : 'border-care-green text-care-green hover:bg-care-green hover:text-white'
                             }`}
-                            onClick={() => setActiveScreen("medications")}
+                            onClick={() => taken ? setActiveScreen("medications") : handleMarkComplete(medication.id, 'medication')}
                           >
-                            {taken ? 'View' : 'Mark Taken'}
+                            {taken ? 'View Details' : 'Mark Complete'}
                           </Button>
                         </div>
                       </div>
@@ -250,15 +265,28 @@ export const MainDashboard = () => {
                     return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
                   };
 
+                  const isCompleted = completedItems.has(appointment.id);
+                  const statusColor = isCompleted ? 'border-l-green-500' : 'border-l-care-blue';
+                  const statusBg = isCompleted ? 'bg-green-50' : 'bg-care-blue/5';
+
                   return (
-                    <Card key={appointment.id} className="p-4 border-l-4 border-l-care-blue bg-care-blue/5">
+                    <Card key={appointment.id} className={`p-4 border-l-4 ${statusColor} ${statusBg} transition-all duration-300`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-care-blue text-white rounded-full flex items-center justify-center">
-                            <Calendar className="h-5 w-5" />
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            isCompleted ? 'bg-green-500 text-white' : 'bg-care-blue text-white'
+                          }`}>
+                            {isCompleted ? <CheckCircle className="h-5 w-5" /> : <Calendar className="h-5 w-5" />}
                           </div>
                           <div>
-                            <p className="font-medium text-lg">Dr. {appointment.doctor_name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-lg">Dr. {appointment.doctor_name}</p>
+                              {isCompleted && (
+                                <span className="text-xs px-2 py-1 rounded-full font-medium bg-green-500 text-white">
+                                  ✓ COMPLETED
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-care-gray font-medium">{appointment.appointment_type}</p>
                             <div className="flex items-center text-sm text-care-blue mt-1">
                               <Clock className="h-4 w-4 mr-1" />
@@ -279,10 +307,14 @@ export const MainDashboard = () => {
                           <Button
                             size="sm" 
                             variant="outline"
-                            className="h-7 text-xs border-care-blue text-care-blue hover:bg-care-blue hover:text-white"
-                            onClick={() => setActiveScreen("appointments")}
+                            className={`h-7 text-xs ${
+                              isCompleted
+                                ? 'border-green-500 text-green-500 bg-green-50'
+                                : 'border-care-blue text-care-blue hover:bg-care-blue hover:text-white'
+                            }`}
+                            onClick={() => isCompleted ? setActiveScreen("appointments") : handleMarkComplete(appointment.id, 'appointment')}
                           >
-                            View Details
+                            {isCompleted ? 'View Details' : 'Mark Complete'}
                           </Button>
                         </div>
                       </div>
