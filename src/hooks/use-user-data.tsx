@@ -57,6 +57,78 @@ export const useUserData = () => {
   useEffect(() => {
     if (user) {
       fetchUserData();
+
+      // Set up real-time subscription for medications
+      const medicationsChannel = supabase
+        .channel('medications-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'medications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Medication change detected:', payload);
+            
+            if (payload.eventType === 'INSERT') {
+              setMedications(prev => [payload.new as Medication, ...prev]);
+            } else if (payload.eventType === 'UPDATE') {
+              setMedications(prev => 
+                prev.map(med => 
+                  med.id === payload.new.id ? payload.new as Medication : med
+                )
+              );
+            } else if (payload.eventType === 'DELETE') {
+              setMedications(prev => 
+                prev.filter(med => med.id !== payload.old.id)
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      // Set up real-time subscription for appointments
+      const appointmentsChannel = supabase
+        .channel('appointments-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'appointments',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Appointment change detected:', payload);
+            
+            if (payload.eventType === 'INSERT') {
+              setAppointments(prev => 
+                [...prev, payload.new as Appointment].sort((a, b) => 
+                  new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime()
+                )
+              );
+            } else if (payload.eventType === 'UPDATE') {
+              setAppointments(prev => 
+                prev.map(apt => 
+                  apt.id === payload.new.id ? payload.new as Appointment : apt
+                )
+              );
+            } else if (payload.eventType === 'DELETE') {
+              setAppointments(prev => 
+                prev.filter(apt => apt.id !== payload.old.id)
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      // Cleanup subscriptions on unmount
+      return () => {
+        supabase.removeChannel(medicationsChannel);
+        supabase.removeChannel(appointmentsChannel);
+      };
     } else {
       setProfile(null);
       setMedications([]);
