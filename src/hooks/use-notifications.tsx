@@ -59,7 +59,7 @@ export const useNotifications = () => {
     }
   }, []);
 
-  // Play continuous alarm sound with dismiss capability
+  // Play bell ring sound with dismiss capability
   const playNotificationSound = useCallback((medicationId?: string, medicationName?: string) => {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -75,41 +75,42 @@ export const useNotifications = () => {
         });
       }
       
-      // Create continuous alarm with multiple frequencies
-      const playBuzzSequence = (startTime: number, duration: number) => {
+      // Create bell ring sound sequence
+      const playBellRing = (startTime: number) => {
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
         
-        // Alarm-like frequency pattern
-        oscillator.frequency.setValueAtTime(200, startTime);
-        oscillator.frequency.setValueAtTime(150, startTime + 0.1);
-        oscillator.frequency.setValueAtTime(200, startTime + 0.2);
-        oscillator.type = 'square';
+        // Bell-like frequency (higher pitched, clean tone)
+        oscillator.frequency.setValueAtTime(800, startTime);
+        oscillator.frequency.exponentialRampToValueAtTime(600, startTime + 0.1);
+        oscillator.type = 'sine'; // Sine wave for cleaner bell sound
         
-        // Volume envelope for buzzing effect
-        gainNode.gain.setValueAtTime(0.4, startTime);
-        gainNode.gain.setValueAtTime(0.1, startTime + 0.1);
-        gainNode.gain.setValueAtTime(0.4, startTime + 0.2);
-        gainNode.gain.setValueAtTime(0.01, startTime + duration);
+        // Bell envelope (quick attack, gradual decay)
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.5, startTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
         
         oscillator.start(startTime);
-        oscillator.stop(startTime + duration);
+        oscillator.stop(startTime + 0.5);
       };
       
-      // Play continuous alarm for 10 seconds (20 buzz sequences)
+      // Play bell ring pattern: 3 rings, pause, repeat
       const now = audioContext.currentTime;
-      for (let i = 0; i < 20; i++) {
-        playBuzzSequence(now + (i * 0.5), 0.4);
+      for (let i = 0; i < 6; i++) {
+        const ringTime = now + (i * 0.6);
+        playBellRing(ringTime);
+        // Second harmonic for richer bell sound
+        playBellRing(ringTime + 0.05);
       }
       
-      // Auto dismiss after 10 seconds
+      // Auto dismiss after 4 seconds
       setTimeout(() => {
         setActiveAlarm(null);
         audioContext.close();
-      }, 10000);
+      }, 4000);
       
     } catch (error) {
       console.error('Error playing notification sound:', error);

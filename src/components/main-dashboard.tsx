@@ -50,27 +50,52 @@ export const MainDashboard = () => {
     return takenDate.toDateString() === today.toDateString();
   };
 
-  // Calculate health metrics based on real data
+  // Calculate health metrics and medication adherence
   const healthMetrics = useMemo(() => {
     const activeMedications = medications.filter(med => med.is_active).length;
     const upcomingAppointments = appointments.filter(apt => 
       new Date(apt.appointment_date) >= new Date()
     ).length;
     
-    // Simple health score calculation (you can make this more sophisticated)
-    let score = 70; // Base score
+    // Calculate medication adherence for today
+    const today = new Date();
+    const medicationsScheduledToday = medications.filter(med => {
+      if (!med.is_active || !med.reminder_times || med.reminder_times.length === 0) return false;
+      const startDate = new Date(med.start_date);
+      return startDate <= today;
+    });
+    
+    const medicationsTakenToday = medicationsScheduledToday.filter(med => {
+      if (!med.last_taken) return false;
+      const takenDate = new Date(med.last_taken);
+      return takenDate.toDateString() === today.toDateString();
+    }).length;
+    
+    const totalScheduledToday = medicationsScheduledToday.length;
+    const adherencePercentage = totalScheduledToday > 0 
+      ? Math.round((medicationsTakenToday / totalScheduledToday) * 100)
+      : 100;
+    
+    // Calculate health score with adherence weight
+    let score = 50; // Base score
+    
+    // Adherence is the most important factor
+    score += adherencePercentage * 0.3; // Up to 30 points
     
     // Add points for having medications (indicates care management)
     if (activeMedications > 0) score += 10;
     
     // Add points for having upcoming appointments
-    if (upcomingAppointments > 0) score += 15;
+    if (upcomingAppointments > 0) score += 10;
     
     // Add points for complete profile
     if (profile?.full_name && profile?.phone) score += 5;
     
     return {
-      healthScore: Math.min(score, 100),
+      healthScore: Math.min(Math.round(score), 100),
+      adherencePercentage,
+      medicationsTakenToday,
+      totalScheduledToday,
       steps: Math.floor(Math.random() * 5000) + 5000, // Simulated steps
       heartRate: Math.floor(Math.random() * 20) + 60, // Simulated heart rate
     };
@@ -134,20 +159,43 @@ export const MainDashboard = () => {
           </div>
         </div>
 
-        <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-100 text-sm">Today's Health Score</p>
-              <p className="text-2xl font-bold">{healthMetrics.healthScore}%</p>
-              <p className="text-xs text-blue-200">
-                Based on medications, appointments & profile
-              </p>
+        <div className="space-y-3">
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm">Today's Health Score</p>
+                <p className="text-2xl font-bold">{healthMetrics.healthScore}%</p>
+                <p className="text-xs text-blue-200">
+                  Based on adherence & care management
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                <Heart className="h-6 w-6 text-red-300" />
+              </div>
             </div>
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-              <Heart className="h-6 w-6 text-red-300" />
+          </Card>
+
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm">Medication Adherence</p>
+                <p className="text-2xl font-bold">{healthMetrics.adherencePercentage}%</p>
+                <p className="text-xs text-blue-200">
+                  {healthMetrics.medicationsTakenToday} of {healthMetrics.totalScheduledToday} taken today
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                <Pill className="h-6 w-6 text-green-300" />
+              </div>
             </div>
-          </div>
-        </Card>
+            <div className="mt-3 h-2 bg-white/20 rounded-full overflow-hidden">
+              <div 
+                className="h-2 bg-green-300 rounded-full transition-all duration-500" 
+                style={{ width: `${healthMetrics.adherencePercentage}%` }}
+              />
+            </div>
+          </Card>
+        </div>
       </div>
 
       {/* Quick Actions */}
