@@ -176,7 +176,8 @@ export const useNotifications = () => {
     message: string, 
     soundAlert = true, 
     itemId?: string,
-    type: 'medication' | 'appointment' = 'medication'
+    type: 'medication' | 'appointment' = 'medication',
+    customVoiceMessage?: string
   ) => {
     if (!permission.granted) return;
 
@@ -189,10 +190,10 @@ export const useNotifications = () => {
     });
 
     if (soundAlert && itemId) {
-      // Use voice alert
-      const voiceText = type === 'medication' 
+      // Use custom voice message if provided, otherwise build default
+      const voiceText = customVoiceMessage || (type === 'medication' 
         ? `It's time to take your medication. ${message}`
-        : `Reminder: ${message}`;
+        : `Reminder: ${message}`);
       await playVoiceAlert(voiceText, itemId, type);
     }
 
@@ -241,12 +242,19 @@ export const useNotifications = () => {
 
         if (timeUntilNotification > 0) {
           const timeout = setTimeout(async () => {
+            // Build voice message with instructions
+            const instructionText = medication.instructions 
+              ? `. Instructions: ${medication.instructions}` 
+              : '';
+            const voiceMessage = `It's time to take your medication. ${medication.name}, ${medication.dosage}${instructionText}`;
+            
             await showNotification(
               'Medication Reminder',
-              `Time to take ${medication.name} - ${medication.dosage}`,
+              `Time to take ${medication.name} - ${medication.dosage}${medication.instructions ? ` (${medication.instructions})` : ''}`,
               medication.sound_alert,
               medication.id,
-              'medication'
+              'medication',
+              voiceMessage
             );
           }, timeUntilNotification);
           
@@ -280,12 +288,16 @@ export const useNotifications = () => {
 
       if (timeUntilReminder > 0) {
         const timeout = setTimeout(async () => {
+          const appointmentNotes = appointment.notes ? `. Notes: ${appointment.notes}` : '';
+          const voiceMessage = `You have an appointment with Doctor ${appointment.doctor_name} for ${appointment.appointment_type} in ${appointment.reminder_minutes || 30} minutes${appointmentNotes}`;
+          
           await showNotification(
             'Appointment Reminder',
             `You have an appointment with Dr. ${appointment.doctor_name} in ${appointment.reminder_minutes || 30} minutes`,
             true,
             appointment.id,
-            'appointment'
+            'appointment',
+            voiceMessage
           );
         }, timeUntilReminder);
         
