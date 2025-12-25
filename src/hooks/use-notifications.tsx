@@ -170,6 +170,32 @@ export const useNotifications = () => {
     setActiveAlarm(null);
   }, [activeAlarm]);
 
+  // Snooze alarm for specified minutes
+  const snoozeAlarm = useCallback((minutes: number = 5) => {
+    if (!activeAlarm) return;
+    
+    const snoozedAlarm = { ...activeAlarm };
+    
+    // Stop current audio
+    if (activeAlarm.audio) {
+      activeAlarm.audio.pause();
+      activeAlarm.audio.currentTime = 0;
+    }
+    setActiveAlarm(null);
+
+    // Schedule snooze timeout
+    const snoozeKey = `snooze-${snoozedAlarm.id}`;
+    const timeout = setTimeout(async () => {
+      const snoozeMessage = `Snooze reminder. ${snoozedAlarm.message}`;
+      await playVoiceAlert(snoozeMessage, snoozedAlarm.id, snoozedAlarm.type);
+      scheduledTimeoutsRef.current.delete(snoozeKey);
+    }, minutes * 60 * 1000);
+    
+    scheduledTimeoutsRef.current.set(snoozeKey, timeout);
+    
+    return timeout;
+  }, [activeAlarm, playVoiceAlert]);
+
   // Show notification with voice alert
   const showNotification = useCallback(async (
     title: string, 
@@ -339,6 +365,7 @@ export const useNotifications = () => {
     playVoiceAlert,
     playBellSound,
     dismissAlarm,
+    snoozeAlarm,
     activeAlarm,
     scheduledNotifications,
   };
