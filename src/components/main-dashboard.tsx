@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { MobileContainer } from "@/components/ui/mobile-container";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,18 +16,35 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserData } from "@/hooks/use-user-data";
+import { useNotifications } from "@/hooks/use-notifications";
 import { MedicationScreen } from "./medication-screen";
 import { AppointmentScreen } from "./appointment-screen";
 import { ProfileScreen } from "./profile-screen";
 import { AddScheduleDialog } from "./add-schedule-dialog";
 import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
+import { MedicationAlarmOverlay } from "./medication-alarm-overlay";
+import { toast } from "sonner";
 
 export const MainDashboard = () => {
   const [activeScreen, setActiveScreen] = useState<"dashboard" | "medications" | "appointments" | "profile">("dashboard");
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const { signOut, user } = useAuth();
   const { profile, medications, appointments, loading, refetchData, markMedicationTaken } = useUserData();
+  const { permission, requestPermission } = useNotifications();
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if (permission.default) {
+      toast.info('Enable notifications to get medication reminders with voice alerts', {
+        action: {
+          label: 'Enable',
+          onClick: requestPermission,
+        },
+        duration: 10000,
+      });
+    }
+  }, [permission.default, requestPermission]);
 
   const handleMarkComplete = async (itemId: string, itemType: 'medication' | 'appointment') => {
     if (itemType === 'medication') {
@@ -142,8 +159,20 @@ export const MainDashboard = () => {
             </p>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={`text-white hover:bg-white/20 relative ${!permission.granted ? 'animate-pulse' : ''}`}
+              onClick={!permission.granted ? requestPermission : undefined}
+              title={permission.granted ? 'Notifications enabled' : 'Click to enable notifications'}
+            >
               <Bell className="h-5 w-5" />
+              {permission.granted && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-care-green rounded-full border-2 border-care-blue"></span>
+              )}
+              {!permission.granted && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-care-orange rounded-full border-2 border-care-blue"></span>
+              )}
             </Button>
             <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={signOut}>
               <LogOut className="h-5 w-5" />
@@ -411,6 +440,9 @@ export const MainDashboard = () => {
 
       {/* Bottom Navigation */}
       <BottomNavigation activeScreen={activeScreen} onNavigate={setActiveScreen} />
+      
+      {/* Medication Alarm Overlay */}
+      <MedicationAlarmOverlay />
     </MobileContainer>
   );
 };
