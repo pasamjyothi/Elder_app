@@ -12,7 +12,8 @@ import {
   Clock,
   Plus,
   LogOut,
-  CheckCircle
+  CheckCircle,
+  Volume2
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserData } from "@/hooks/use-user-data";
@@ -29,9 +30,10 @@ import { toast } from "sonner";
 export const MainDashboard = () => {
   const [activeScreen, setActiveScreen] = useState<"dashboard" | "medications" | "appointments" | "profile">("dashboard");
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
+  const [testingAlert, setTestingAlert] = useState(false);
   const { signOut, user } = useAuth();
   const { profile, medications, appointments, loading, refetchData, markMedicationTaken } = useUserData();
-  const { permission, requestPermission } = useNotifications();
+  const { permission, requestPermission, playVoiceAlert } = useNotifications();
 
   // Request notification permission on mount
   useEffect(() => {
@@ -45,6 +47,25 @@ export const MainDashboard = () => {
       });
     }
   }, [permission.default, requestPermission]);
+
+  // Test voice alert function
+  const handleTestAlert = async () => {
+    setTestingAlert(true);
+    try {
+      const testMed = medications[0];
+      const testMessage = testMed 
+        ? `Test alert. It's time to take your medication. ${testMed.name}, ${testMed.dosage}${testMed.instructions ? `. Instructions: ${testMed.instructions}` : ''}`
+        : "Test alert. It's time to take your medication. This is a test of the voice alert system.";
+      
+      await playVoiceAlert(testMessage, 'test-alert', 'medication');
+      toast.success("Voice alert test completed!");
+    } catch (error) {
+      console.error("Test alert failed:", error);
+      toast.error("Voice alert test failed - check console");
+    } finally {
+      setTestingAlert(false);
+    }
+  };
 
   const handleMarkComplete = async (itemId: string, itemType: 'medication' | 'appointment') => {
     if (itemType === 'medication') {
@@ -158,7 +179,17 @@ export const MainDashboard = () => {
               {profile?.full_name || user?.email?.split('@')[0] || 'User'}
             </p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-white hover:bg-white/20"
+              onClick={handleTestAlert}
+              disabled={testingAlert}
+              title="Test voice alert"
+            >
+              <Volume2 className={`h-5 w-5 ${testingAlert ? 'animate-pulse' : ''}`} />
+            </Button>
             <Button 
               variant="ghost" 
               size="icon" 
