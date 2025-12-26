@@ -12,9 +12,11 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  Bell
+  Bell,
+  Volume2
 } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
+import { useNotifications } from "@/hooks/use-notifications";
 import { AddMedicationDialog } from "./add-medication-dialog";
 import { MedicationAlarmOverlay } from "./medication-alarm-overlay";
 import { AddScheduleDialog } from "./add-schedule-dialog";
@@ -30,7 +32,26 @@ interface MedicationScreenProps {
 
 export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: MedicationScreenProps) => {
   const { medications, loading, deleteMedication, markMedicationTaken } = useUserData();
+  const { playVoiceAlert } = useNotifications();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [testingVoice, setTestingVoice] = useState<string | null>(null);
+
+  const handleTestVoiceAlert = async (medication: typeof medications[0]) => {
+    setTestingVoice(medication.id);
+    try {
+      const instructionText = medication.instructions 
+        ? `. Instructions: ${medication.instructions}` 
+        : '';
+      const voiceMessage = `It's time to take your medication. ${medication.name}, ${medication.dosage}${instructionText}`;
+      await playVoiceAlert(voiceMessage);
+      toast.success("Voice alert played successfully");
+    } catch (error) {
+      console.error("Voice test failed:", error);
+      toast.error("Voice alert failed - check console for details");
+    } finally {
+      setTestingVoice(null);
+    }
+  };
 
   const handleDeleteMedication = async (medicationId: string, medicationName: string) => {
     if (window.confirm(`Are you sure you want to delete ${medicationName}?`)) {
@@ -169,6 +190,17 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
                         </span>
                         
                         <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 w-8 p-0 text-care-blue hover:bg-care-blue/10"
+                            onClick={() => handleTestVoiceAlert(med)}
+                            disabled={testingVoice === med.id}
+                            title="Test voice alert"
+                          >
+                            <Volume2 className={`h-4 w-4 ${testingVoice === med.id ? 'animate-pulse' : ''}`} />
+                          </Button>
+                          
                           <Button
                             size="sm"
                             className={`h-8 px-3 text-xs font-medium ${
