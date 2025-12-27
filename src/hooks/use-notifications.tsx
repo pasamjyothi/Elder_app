@@ -64,11 +64,78 @@ export const useNotifications = () => {
     }
   }, []);
 
-  // Play voice alert using ElevenLabs TTS
+  // Fallback bell sound
+  const playBellSound = useCallback(() => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+      const playBellRing = (startTime: number) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(800, startTime);
+        oscillator.frequency.exponentialRampToValueAtTime(600, startTime + 0.1);
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.5, startTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.5);
+      };
+
+      const now = audioContext.currentTime;
+      for (let i = 0; i < 6; i++) {
+        const ringTime = now + (i * 0.6);
+        playBellRing(ringTime);
+        playBellRing(ringTime + 0.05);
+      }
+
+      setTimeout(() => {
+        audioContext.close();
+      }, 4000);
+    } catch (error) {
+      console.error('Error playing bell sound:', error);
+    }
+  }, []);
+
+  // Browser TTS fallback (no external API)
+  const speakWithBrowserTTS = useCallback(async (text: string) => {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      return false;
+    }
+
+    try {
+      // Stop any ongoing speech to avoid stacking
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      await new Promise<void>((resolve, reject) => {
+        utterance.onend = () => resolve();
+        utterance.onerror = () => reject(new Error('Browser TTS failed'));
+        window.speechSynthesis.speak(utterance);
+      });
+
+      return true;
+    } catch (e) {
+      console.error('Browser TTS error:', e);
+      return false;
+    }
+  }, []);
+
+  // Play voice alert using ElevenLabs TTS (with browser TTS fallback)
   const playVoiceAlert = useCallback(async (text: string, medicationId?: string, medicationType?: 'medication' | 'appointment') => {
     try {
       console.log("Playing voice alert for:", text);
-      
+
       // Set active alarm state first
       if (medicationId) {
         setActiveAlarm({
@@ -93,74 +160,37 @@ export const useNotifications = () => {
       );
 
       if (!response.ok) {
-        console.error("TTS request failed, falling back to bell sound");
-        playBellSound();
+        // 401 often means invalid/blocked key (e.g., free-tier disabled). Fall back gracefully.
+        console.error(`TTS request failed (${response.status}), falling back to browser TTS / bell`);
+
+        const spoken = await speakWithBrowserTTS(text);
+        if (!spoken) playBellSound();
+
         return;
       }
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
-      
+
       // Update active alarm with audio reference
       if (medicationId) {
-        setActiveAlarm(prev => prev ? { ...prev, audio } : null);
+        setActiveAlarm((prev) => (prev ? { ...prev, audio } : null));
       }
-      
+
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
       };
-      
+
       await audio.play();
       console.log("Voice alert played successfully");
-      
     } catch (error) {
       console.error('Error playing voice alert:', error);
-      // Fallback to bell sound
-      playBellSound();
-    }
-  }, []);
 
-  // Fallback bell sound
-  const playBellSound = useCallback(() => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      const playBellRing = (startTime: number) => {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.setValueAtTime(800, startTime);
-        oscillator.frequency.exponentialRampToValueAtTime(600, startTime + 0.1);
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(0.5, startTime + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
-        
-        oscillator.start(startTime);
-        oscillator.stop(startTime + 0.5);
-      };
-      
-      const now = audioContext.currentTime;
-      for (let i = 0; i < 6; i++) {
-        const ringTime = now + (i * 0.6);
-        playBellRing(ringTime);
-        playBellRing(ringTime + 0.05);
-      }
-      
-      setTimeout(() => {
-        audioContext.close();
-      }, 4000);
-      
-    } catch (error) {
-      console.error('Error playing bell sound:', error);
+      const spoken = await speakWithBrowserTTS(text);
+      if (!spoken) playBellSound();
     }
-  }, []);
-
+  }, [playBellSound, speakWithBrowserTTS]);
   // Dismiss active alarm
   const dismissAlarm = useCallback(() => {
     if (activeAlarm?.audio) {
