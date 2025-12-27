@@ -227,45 +227,49 @@ export const useNotifications = () => {
   }, [activeAlarm, playVoiceAlert]);
 
   // Show notification with voice alert
+  // NOTE: We still play in-app alerts (voice/bell + toast) even if browser notifications are not granted.
   const showNotification = useCallback(async (
-    title: string, 
-    message: string, 
-    soundAlert = true, 
+    title: string,
+    message: string,
+    soundAlert = true,
     itemId?: string,
     type: 'medication' | 'appointment' = 'medication',
     customVoiceMessage?: string
   ) => {
-    if (!permission.granted) return;
+    console.log('[notifications] showNotification', { title, type, soundAlert, itemId });
 
-    const notification = new Notification(title, {
-      body: message,
-      icon: '/favicon.ico',
-      badge: '/favicon.ico',
-      tag: 'carenest-notification',
-      requireInteraction: true,
+    // Browser Notification (optional)
+    let notification: Notification | undefined;
+    if (permission.granted) {
+      notification = new Notification(title, {
+        body: message,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: 'carenest-notification',
+        requireInteraction: true,
+      });
+
+      // Auto close after 15 seconds
+      setTimeout(() => {
+        notification?.close();
+      }, 15000);
+    }
+
+    // Always show toast (in-app)
+    toast.info(`${title}: ${message}`, {
+      duration: 15000,
     });
 
+    // Always play alert sound/voice if enabled
     if (soundAlert && itemId) {
-      // Use custom voice message if provided, otherwise build default
-      const voiceText = customVoiceMessage || (type === 'medication' 
+      const voiceText = customVoiceMessage || (type === 'medication'
         ? `It's time to take your medication. ${message}`
         : `Reminder: ${message}`);
       await playVoiceAlert(voiceText, itemId, type);
     }
 
-    // Auto close after 15 seconds
-    setTimeout(() => {
-      notification.close();
-    }, 15000);
-
-    // Also show toast
-    toast.info(`${title}: ${message}`, {
-      duration: 15000,
-    });
-
     return notification;
   }, [permission.granted, playVoiceAlert]);
-
   // Schedule medication reminders with auto-update
   const scheduleMedicationReminders = useCallback(() => {
     if (!medications || !user) return;
@@ -375,19 +379,23 @@ export const useNotifications = () => {
   }, []);
 
   // Schedule notifications when data changes (real-time updates)
+  // IMPORTANT: We schedule timers regardless of browser Notification permission so that in-app voice/bell alerts still work.
   useEffect(() => {
-    if (permission.granted) {
-      scheduleMedicationReminders();
-      scheduleAppointmentReminders();
-    }
+    console.log('[notifications] scheduling reminders', {
+      meds: medications?.length || 0,
+      appts: appointments?.length || 0,
+      browserPermission: permission.granted ? 'granted' : permission.denied ? 'denied' : 'default',
+    });
+
+    scheduleMedicationReminders();
+    scheduleAppointmentReminders();
 
     // Cleanup on unmount
     return () => {
       scheduledTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
       scheduledTimeoutsRef.current.clear();
     };
-  }, [permission.granted, scheduleMedicationReminders, scheduleAppointmentReminders]);
-
+  }, [permission.granted, permission.denied, medications, appointments, scheduleMedicationReminders, scheduleAppointmentReminders]);
   return {
     permission,
     requestPermission,
