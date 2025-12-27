@@ -10,7 +10,9 @@ import {
   MapPin,
   Phone,
   Video,
-  Volume2
+  Volume2,
+  Trash2,
+  Pencil
 } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -27,7 +29,7 @@ interface AppointmentScreenProps {
 }
 
 export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: AppointmentScreenProps) => {
-  const { appointments, loading } = useUserData();
+  const { appointments, loading, deleteAppointment } = useUserData();
   const { playVoiceAlert } = useNotifications();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "virtual" | "in-person">("all");
@@ -47,6 +49,17 @@ export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: Appointm
       toast.error("Voice alert failed - check console");
     } finally {
       setTestingVoice(null);
+    }
+  };
+
+  const handleDeleteAppointment = async (appointmentId: string, doctorName: string) => {
+    if (window.confirm(`Are you sure you want to delete the appointment with Dr. ${doctorName}?`)) {
+      const result = await deleteAppointment(appointmentId);
+      if (!result?.error) {
+        toast.success("Appointment deleted successfully");
+      } else {
+        toast.error("Failed to delete appointment");
+      }
     }
   };
 
@@ -201,31 +214,52 @@ export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: Appointm
                     )}
                   </div>
 
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-2 flex-wrap gap-1">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 w-8 p-0 text-care-blue hover:bg-care-blue/10"
+                      className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
                       onClick={() => handleTestVoiceAlert(apt)}
                       disabled={testingVoice === apt.id}
                       title="Test voice alert"
                     >
-                      <Volume2 className={`h-4 w-4 ${testingVoice === apt.id ? 'animate-pulse' : ''}`} />
+                      <Volume2 className={`h-3.5 w-3.5 ${testingVoice === apt.id ? 'animate-pulse' : ''}`} />
                     </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
+                      onClick={() => toast.info("Edit feature coming soon!")}
+                      title="Edit appointment"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 text-destructive hover:bg-destructive/20"
+                      onClick={() => handleDeleteAppointment(apt.id, apt.doctor_name)}
+                      title="Delete appointment"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+
                     {apt.is_virtual ? (
-                      <Button size="sm" className="flex-1 bg-care-blue hover:bg-care-blue-dark text-white">
-                        <Video className="h-4 w-4 mr-2" />
-                        Join Call
+                      <Button size="sm" className="flex-1 h-7 text-xs bg-care-blue hover:bg-care-blue-dark text-white">
+                        <Video className="h-3.5 w-3.5 mr-1" />
+                        Join
                       </Button>
                     ) : (
-                      <Button size="sm" className="flex-1 bg-care-blue hover:bg-care-blue-dark text-white">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        View Details
+                      <Button size="sm" className="flex-1 h-7 text-xs bg-care-blue hover:bg-care-blue-dark text-white">
+                        <MapPin className="h-3.5 w-3.5 mr-1" />
+                        Details
                       </Button>
                     )}
                     
-                    <Button variant="outline" size="sm" className="border-care-blue/20">
-                      <Phone className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="h-7 w-7 p-0 border-care-blue/20">
+                      <Phone className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </Card>
