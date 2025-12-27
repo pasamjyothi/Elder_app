@@ -9,13 +9,16 @@ import {
   Clock, 
   MapPin,
   Phone,
-  Video
+  Video,
+  Volume2
 } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
+import { useNotifications } from "@/hooks/use-notifications";
 import { AddAppointmentDialog } from "./add-appointment-dialog";
 import { AddScheduleDialog } from "./add-schedule-dialog";
 import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
+import { toast } from "sonner";
 
 interface AppointmentScreenProps {
   onBack: () => void;
@@ -25,8 +28,27 @@ interface AppointmentScreenProps {
 
 export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: AppointmentScreenProps) => {
   const { appointments, loading } = useUserData();
+  const { playVoiceAlert } = useNotifications();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "virtual" | "in-person">("all");
+  const [testingVoice, setTestingVoice] = useState<string | null>(null);
+
+  const handleTestVoiceAlert = async (apt: typeof appointments[0]) => {
+    setTestingVoice(apt.id);
+    try {
+      const appointmentDate = new Date(apt.appointment_date);
+      const formattedTime = appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const formattedDate = appointmentDate.toLocaleDateString();
+      const voiceMessage = `You have an appointment with Doctor ${apt.doctor_name} for ${apt.appointment_type} on ${formattedDate} at ${formattedTime}${apt.notes ? `. Notes: ${apt.notes}` : ''}`;
+      await playVoiceAlert(voiceMessage);
+      toast.success("Voice alert played successfully");
+    } catch (error) {
+      console.error("Voice test failed:", error);
+      toast.error("Voice alert failed - check console");
+    } finally {
+      setTestingVoice(null);
+    }
+  };
 
   const filteredAppointments = appointments.filter(apt => {
     if (filterType === "virtual") return apt.is_virtual;
@@ -180,6 +202,16 @@ export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: Appointm
                   </div>
 
                   <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0 text-care-blue hover:bg-care-blue/10"
+                      onClick={() => handleTestVoiceAlert(apt)}
+                      disabled={testingVoice === apt.id}
+                      title="Test voice alert"
+                    >
+                      <Volume2 className={`h-4 w-4 ${testingVoice === apt.id ? 'animate-pulse' : ''}`} />
+                    </Button>
                     {apt.is_virtual ? (
                       <Button size="sm" className="flex-1 bg-care-blue hover:bg-care-blue-dark text-white">
                         <Video className="h-4 w-4 mr-2" />

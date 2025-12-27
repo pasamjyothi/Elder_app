@@ -13,7 +13,8 @@ import {
   CheckCircle,
   XCircle,
   Bell,
-  Volume2
+  Volume2,
+  Pencil
 } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -189,37 +190,48 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
                           {takenToday ? '✓ COMPLETED TODAY' : '⏰ NOT TAKEN'}
                         </span>
                         
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap justify-end">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-8 w-8 p-0 text-care-blue hover:bg-care-blue/10"
+                            className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
                             onClick={() => handleTestVoiceAlert(med)}
                             disabled={testingVoice === med.id}
                             title="Test voice alert"
                           >
-                            <Volume2 className={`h-4 w-4 ${testingVoice === med.id ? 'animate-pulse' : ''}`} />
+                            <Volume2 className={`h-3.5 w-3.5 ${testingVoice === med.id ? 'animate-pulse' : ''}`} />
                           </Button>
-                          
+
                           <Button
                             size="sm"
-                            className={`h-8 px-3 text-xs font-medium ${
+                            variant="outline"
+                            className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
+                            onClick={() => toast.info("Edit feature coming soon!")}
+                            title="Edit medication"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-destructive hover:bg-destructive/20"
+                            onClick={() => handleDeleteMedication(med.id, med.name)}
+                            title="Delete medication"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            className={`h-7 px-2 text-[10px] font-medium ${
                               takenToday 
                                 ? 'bg-care-orange hover:bg-care-orange/90 text-white' 
                                 : 'bg-care-green hover:bg-care-green/90 text-white'
                             }`}
                             onClick={() => handleMarkTaken(med.id, !takenToday)}
                           >
-                            {takenToday ? 'Mark Not Taken' : 'Mark as Taken'}
-                          </Button>
-                          
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive/20"
-                            onClick={() => handleDeleteMedication(med.id, med.name)}
-                          >
-                            <Trash2 className="h-4 w-4" />
+                            {takenToday ? 'Not Taken' : 'Taken'}
                           </Button>
                         </div>
                       </div>
