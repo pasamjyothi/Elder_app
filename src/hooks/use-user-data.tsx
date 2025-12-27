@@ -277,10 +277,91 @@ export const useUserData = () => {
         return { error };
       }
 
+      // Immediately update local state (real-time will also trigger, but this is faster)
       setMedications(prev => prev.filter(med => med.id !== medicationId));
       return { error: null };
     } catch (error) {
       console.error('Error deleting medication:', error);
+      return { error };
+    }
+  };
+
+  const deleteAppointment = async (appointmentId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', appointmentId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error deleting appointment:', error);
+        return { error };
+      }
+
+      // Immediately update local state
+      setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
+      return { error: null };
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      return { error };
+    }
+  };
+
+  const updateMedication = async (medicationId: string, updates: Partial<Omit<Medication, 'id' | 'user_id'>>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('medications')
+        .update(updates as any)
+        .eq('id', medicationId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating medication:', error);
+        return { error };
+      }
+
+      // Immediately update local state
+      setMedications(prev => prev.map(med => 
+        med.id === medicationId ? { ...med, ...data } : med
+      ));
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating medication:', error);
+      return { error };
+    }
+  };
+
+  const updateAppointment = async (appointmentId: string, updates: Partial<Omit<Appointment, 'id' | 'user_id'>>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update(updates as any)
+        .eq('id', appointmentId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating appointment:', error);
+        return { error };
+      }
+
+      // Immediately update local state
+      setAppointments(prev => prev.map(apt => 
+        apt.id === appointmentId ? { ...apt, ...data } : apt
+      ));
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error updating appointment:', error);
       return { error };
     }
   };
@@ -293,7 +374,7 @@ export const useUserData = () => {
         .from('medications')
         .update({ 
           last_taken: taken ? new Date().toISOString() : null 
-        } as any) // Type assertion to bypass TypeScript checking
+        } as any)
         .eq('id', medicationId)
         .eq('user_id', user.id)
         .select()
@@ -326,6 +407,9 @@ export const useUserData = () => {
     addAppointment,
     updateProfile,
     deleteMedication,
+    deleteAppointment,
+    updateMedication,
+    updateAppointment,
     markMedicationTaken,
     refetchData: fetchUserData,
   };
