@@ -13,10 +13,12 @@ import {
   Plus,
   LogOut,
   CheckCircle,
-  Volume2
+  Volume2,
+  Pencil,
+  Trash2
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useUserData } from "@/hooks/use-user-data";
+import { useUserData, Medication, Appointment } from "@/hooks/use-user-data";
 import { useNotifications } from "@/hooks/use-notifications";
 import { MedicationScreen } from "./medication-screen";
 import { AppointmentScreen } from "./appointment-screen";
@@ -25,14 +27,22 @@ import { AddScheduleDialog } from "./add-schedule-dialog";
 import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
 import { MedicationAlarmOverlay } from "./medication-alarm-overlay";
+import { EditMedicationDialog } from "./edit-medication-dialog";
+import { EditAppointmentDialog } from "./edit-appointment-dialog";
 import { toast } from "sonner";
 
 export const MainDashboard = () => {
   const [activeScreen, setActiveScreen] = useState<"dashboard" | "medications" | "appointments" | "profile">("dashboard");
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [testingAlert, setTestingAlert] = useState(false);
+  const [testingMedVoice, setTestingMedVoice] = useState<string | null>(null);
+  const [testingAptVoice, setTestingAptVoice] = useState<string | null>(null);
+  const [showEditMedDialog, setShowEditMedDialog] = useState(false);
+  const [showEditAptDialog, setShowEditAptDialog] = useState(false);
+  const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { signOut, user } = useAuth();
-  const { profile, medications, appointments, loading, refetchData, markMedicationTaken } = useUserData();
+  const { profile, medications, appointments, loading, refetchData, markMedicationTaken, deleteMedication, deleteAppointment } = useUserData();
   const { permission, requestPermission, playVoiceAlert } = useNotifications();
 
   // Request notification permission on mount
@@ -64,6 +74,78 @@ export const MainDashboard = () => {
       toast.error("Voice alert test failed - check console");
     } finally {
       setTestingAlert(false);
+    }
+  };
+
+  // Test medication voice alert
+  const handleTestMedVoice = async (medication: Medication) => {
+    setTestingMedVoice(medication.id);
+    try {
+      const instructionText = medication.instructions 
+        ? `. Instructions: ${medication.instructions}` 
+        : '';
+      const voiceMessage = `It's time to take your medication. ${medication.name}, ${medication.dosage}${instructionText}`;
+      await playVoiceAlert(voiceMessage);
+      toast.success("Voice alert played successfully");
+    } catch (error) {
+      console.error("Voice test failed:", error);
+      toast.error("Voice alert failed");
+    } finally {
+      setTestingMedVoice(null);
+    }
+  };
+
+  // Test appointment voice alert
+  const handleTestAptVoice = async (apt: Appointment) => {
+    setTestingAptVoice(apt.id);
+    try {
+      const appointmentDate = new Date(apt.appointment_date);
+      const formattedTime = appointmentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const formattedDate = appointmentDate.toLocaleDateString();
+      const voiceMessage = `You have an appointment with Doctor ${apt.doctor_name} for ${apt.appointment_type} on ${formattedDate} at ${formattedTime}`;
+      await playVoiceAlert(voiceMessage);
+      toast.success("Voice alert played successfully");
+    } catch (error) {
+      console.error("Voice test failed:", error);
+      toast.error("Voice alert failed");
+    } finally {
+      setTestingAptVoice(null);
+    }
+  };
+
+  // Edit medication
+  const handleEditMedication = (medication: Medication) => {
+    setEditingMedication(medication);
+    setShowEditMedDialog(true);
+  };
+
+  // Edit appointment
+  const handleEditAppointment = (appointment: Appointment) => {
+    setEditingAppointment(appointment);
+    setShowEditAptDialog(true);
+  };
+
+  // Delete medication
+  const handleDeleteMedication = async (medicationId: string, medicationName: string) => {
+    if (window.confirm(`Are you sure you want to delete ${medicationName}?`)) {
+      const result = await deleteMedication(medicationId);
+      if (!result?.error) {
+        toast.success("Medication deleted successfully");
+      } else {
+        toast.error("Failed to delete medication");
+      }
+    }
+  };
+
+  // Delete appointment
+  const handleDeleteAppointment = async (appointmentId: string, doctorName: string) => {
+    if (window.confirm(`Are you sure you want to delete the appointment with Dr. ${doctorName}?`)) {
+      const result = await deleteAppointment(appointmentId);
+      if (!result?.error) {
+        toast.success("Appointment deleted successfully");
+      } else {
+        toast.error("Failed to delete appointment");
+      }
     }
   };
 
@@ -345,6 +427,36 @@ export const MainDashboard = () => {
                               {medication.sound_alert ? 'Sound Alert' : 'Silent'}
                             </div>
                           )}
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
+                              onClick={() => handleTestMedVoice(medication)}
+                              disabled={testingMedVoice === medication.id}
+                              title="Test voice alert"
+                            >
+                              <Volume2 className={`h-3.5 w-3.5 ${testingMedVoice === medication.id ? 'animate-pulse' : ''}`} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
+                              onClick={() => handleEditMedication(medication)}
+                              title="Edit medication"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-destructive hover:bg-destructive/20"
+                              onClick={() => handleDeleteMedication(medication.id, medication.name)}
+                              title="Delete medication"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                           <Button
                             size="sm" 
                             variant="outline"
@@ -412,6 +524,36 @@ export const MainDashboard = () => {
                           }`}>
                             {appointment.is_virtual ? 'Virtual' : 'In-Person'}
                           </span>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
+                              onClick={() => handleTestAptVoice(appointment)}
+                              disabled={testingAptVoice === appointment.id}
+                              title="Test voice alert"
+                            >
+                              <Volume2 className={`h-3.5 w-3.5 ${testingAptVoice === appointment.id ? 'animate-pulse' : ''}`} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
+                              onClick={() => handleEditAppointment(appointment)}
+                              title="Edit appointment"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-destructive hover:bg-destructive/20"
+                              onClick={() => handleDeleteAppointment(appointment.id, appointment.doctor_name)}
+                              title="Delete appointment"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                           <Button
                             size="sm" 
                             variant="outline"
@@ -474,6 +616,18 @@ export const MainDashboard = () => {
       
       {/* Medication Alarm Overlay */}
       <MedicationAlarmOverlay />
+      
+      {/* Edit Dialogs */}
+      <EditMedicationDialog 
+        open={showEditMedDialog} 
+        onOpenChange={setShowEditMedDialog} 
+        medication={editingMedication} 
+      />
+      <EditAppointmentDialog 
+        open={showEditAptDialog} 
+        onOpenChange={setShowEditAptDialog} 
+        appointment={editingAppointment} 
+      />
     </MobileContainer>
   );
 };
