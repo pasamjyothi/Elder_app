@@ -17,10 +17,12 @@ import {
 import { useUserData } from "@/hooks/use-user-data";
 import { useNotifications } from "@/hooks/use-notifications";
 import { AddAppointmentDialog } from "./add-appointment-dialog";
+import { EditAppointmentDialog } from "./edit-appointment-dialog";
 import { AddScheduleDialog } from "./add-schedule-dialog";
 import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
 import { toast } from "sonner";
+import { Appointment } from "@/hooks/use-user-data";
 
 interface AppointmentScreenProps {
   onBack: () => void;
@@ -32,8 +34,15 @@ export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: Appointm
   const { appointments, loading, deleteAppointment } = useUserData();
   const { playVoiceAlert } = useNotifications();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [filterType, setFilterType] = useState<"all" | "virtual" | "in-person">("all");
   const [testingVoice, setTestingVoice] = useState<string | null>(null);
+
+  const handleEditAppointment = (appointment: Appointment) => {
+    setEditingAppointment(appointment);
+    setShowEditDialog(true);
+  };
 
   const handleTestVoiceAlert = async (apt: typeof appointments[0]) => {
     setTestingVoice(apt.id);
@@ -230,7 +239,7 @@ export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: Appointm
                       size="sm"
                       variant="outline"
                       className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
-                      onClick={() => toast.info("Edit feature coming soon!")}
+                      onClick={() => handleEditAppointment(apt)}
                       title="Edit appointment"
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -292,6 +301,11 @@ export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: Appointm
       </div>
       
       <AddAppointmentDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
+      <EditAppointmentDialog 
+        open={showEditDialog} 
+        onOpenChange={setShowEditDialog} 
+        appointment={editingAppointment} 
+      />
       
       <BottomNavigation activeScreen={activeScreen} onNavigate={onNavigate} />
     </MobileContainer>
