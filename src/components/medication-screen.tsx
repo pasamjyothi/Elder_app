@@ -19,11 +19,13 @@ import {
 import { useUserData } from "@/hooks/use-user-data";
 import { useNotifications } from "@/hooks/use-notifications";
 import { AddMedicationDialog } from "./add-medication-dialog";
+import { EditMedicationDialog } from "./edit-medication-dialog";
 import { MedicationAlarmOverlay } from "./medication-alarm-overlay";
 import { AddScheduleDialog } from "./add-schedule-dialog";
 import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
 import { toast } from "sonner";
+import { Medication } from "@/hooks/use-user-data";
 
 interface MedicationScreenProps {
   onBack: () => void;
@@ -35,7 +37,14 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
   const { medications, loading, deleteMedication, markMedicationTaken } = useUserData();
   const { playVoiceAlert } = useNotifications();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
   const [testingVoice, setTestingVoice] = useState<string | null>(null);
+
+  const handleEditMedication = (medication: Medication) => {
+    setEditingMedication(medication);
+    setShowEditDialog(true);
+  };
 
   const handleTestVoiceAlert = async (medication: typeof medications[0]) => {
     setTestingVoice(medication.id);
@@ -206,7 +215,7 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
                             size="sm"
                             variant="outline"
                             className="h-7 w-7 p-0 text-care-blue hover:bg-care-blue/10"
-                            onClick={() => toast.info("Edit feature coming soon!")}
+                            onClick={() => handleEditMedication(med)}
                             title="Edit medication"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -261,6 +270,11 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
       </div>
       
       <AddMedicationDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
+      <EditMedicationDialog 
+        open={showEditDialog} 
+        onOpenChange={setShowEditDialog} 
+        medication={editingMedication} 
+      />
       <MedicationAlarmOverlay />
       
       <BottomNavigation activeScreen={activeScreen} onNavigate={onNavigate} />
