@@ -170,6 +170,14 @@ export const MainDashboard = () => {
     return takenDate.toDateString() === today.toDateString();
   };
 
+  // Get dynamic greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Good Morning";
+    if (hour >= 12 && hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
+
   // Calculate health metrics and medication adherence
   const healthMetrics = useMemo(() => {
     const activeMedications = medications.filter(med => med.is_active).length;
@@ -256,7 +264,7 @@ export const MainDashboard = () => {
       <div className="bg-gradient-to-br from-care-blue to-care-blue-dark text-white p-6 pb-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-xl font-semibold">Good Morning,</h1>
+            <h1 className="text-xl font-semibold">{getGreeting()},</h1>
             <p className="text-blue-100">
               {profile?.full_name || user?.email?.split('@')[0] || 'User'}
             </p>

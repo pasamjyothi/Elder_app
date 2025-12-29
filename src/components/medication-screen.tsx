@@ -21,11 +21,13 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { AddMedicationDialog } from "./add-medication-dialog";
 import { EditMedicationDialog } from "./edit-medication-dialog";
 import { MedicationAlarmOverlay } from "./medication-alarm-overlay";
+import { MedicationHistory } from "./medication-history";
 import { AddScheduleDialog } from "./add-schedule-dialog";
 import { AddScheduleForm } from "./add-schedule-form";
 import { BottomNavigation } from "./bottom-navigation";
 import { toast } from "sonner";
 import { Medication } from "@/hooks/use-user-data";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface MedicationScreenProps {
   onBack: () => void;
@@ -34,7 +36,7 @@ interface MedicationScreenProps {
 }
 
 export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: MedicationScreenProps) => {
-  const { medications, loading, deleteMedication, markMedicationTaken, updateMedication } = useUserData();
+  const { medications, medicationHistory, loading, deleteMedication, markMedicationTaken, updateMedication } = useUserData();
   const { playVoiceAlert } = useNotifications();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -252,9 +254,18 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
           )}
         </div>
 
+        {/* Medication History */}
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-care-blue" />
+            Medication History
+          </h2>
+          <MedicationHistory history={medicationHistory} loading={loading} />
+        </div>
+
         {/* Quick Stats */}
         {medications.length > 0 && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 mt-6">
             <Card className="p-4 text-center">
               <Calendar className="h-8 w-8 text-care-blue mx-auto mb-2" />
               <p className="text-2xl font-bold">{medications.filter(m => m.is_active).length}</p>
@@ -262,8 +273,8 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
             </Card>
             <Card className="p-4 text-center">
               <Pill className="h-8 w-8 text-care-green mx-auto mb-2" />
-              <p className="text-2xl font-bold">{medications.length}</p>
-              <p className="text-sm text-care-gray">Total Meds</p>
+              <p className="text-2xl font-bold">{medicationHistory.length}</p>
+              <p className="text-sm text-care-gray">Times Taken</p>
             </Card>
           </div>
         )}
