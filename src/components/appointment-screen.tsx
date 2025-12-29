@@ -31,7 +31,7 @@ interface AppointmentScreenProps {
 }
 
 export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: AppointmentScreenProps) => {
-  const { appointments, loading, deleteAppointment } = useUserData();
+  const { appointments, loading, deleteAppointment, updateAppointment } = useUserData();
   const { playVoiceAlert } = useNotifications();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -304,7 +304,8 @@ export const AppointmentScreen = ({ onBack, onNavigate, activeScreen }: Appointm
       <EditAppointmentDialog 
         open={showEditDialog} 
         onOpenChange={setShowEditDialog} 
-        appointment={editingAppointment} 
+        appointment={editingAppointment}
+        onUpdate={updateAppointment}
       />
       
       <BottomNavigation activeScreen={activeScreen} onNavigate={onNavigate} />

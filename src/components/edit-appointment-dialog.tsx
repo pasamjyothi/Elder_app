@@ -6,16 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useUserData, Appointment } from "@/hooks/use-user-data";
+import { Appointment } from "@/hooks/use-user-data";
 import { useToast } from "@/hooks/use-toast";
 
 interface EditAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   appointment: Appointment | null;
+  onUpdate: (appointmentId: string, updates: Partial<Omit<Appointment, 'id' | 'user_id'>>) => Promise<{ error: any } | { data: any; error: null } | undefined>;
 }
 
-export const EditAppointmentDialog = ({ open, onOpenChange, appointment }: EditAppointmentDialogProps) => {
+export const EditAppointmentDialog = ({ open, onOpenChange, appointment, onUpdate }: EditAppointmentDialogProps) => {
   const [formData, setFormData] = useState({
     doctor_name: "",
     appointment_type: "",
@@ -28,7 +29,6 @@ export const EditAppointmentDialog = ({ open, onOpenChange, appointment }: EditA
     enable_notifications: true,
   });
   const [loading, setLoading] = useState(false);
-  const { updateAppointment } = useUserData();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export const EditAppointmentDialog = ({ open, onOpenChange, appointment }: EditA
     try {
       const appointmentDateTime = new Date(`${formData.appointment_date}T${formData.appointment_time}`);
       
-      const result = await updateAppointment(appointment.id, {
+      const result = await onUpdate(appointment.id, {
         doctor_name: formData.doctor_name,
         appointment_type: formData.appointment_type,
         appointment_date: appointmentDateTime.toISOString(),
