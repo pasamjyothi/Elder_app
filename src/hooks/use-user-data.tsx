@@ -47,11 +47,22 @@ export interface Appointment {
   notification_sent?: boolean;
 }
 
+export interface MedicationHistoryEntry {
+  id: string;
+  medication_id: string;
+  user_id: string;
+  taken_at: string;
+  scheduled_time?: string;
+  notes?: string;
+  medication_name?: string;
+}
+
 export const useUserData = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [medicationHistory, setMedicationHistory] = useState<MedicationHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -366,10 +377,11 @@ export const useUserData = () => {
     }
   };
 
-  const markMedicationTaken = async (medicationId: string, taken: boolean) => {
+  const markMedicationTaken = async (medicationId: string, taken: boolean, scheduledTime?: string) => {
     if (!user) return;
 
     try {
+      // Update last_taken on medication
       const { data, error } = await supabase
         .from('medications')
         .update({ 
@@ -385,6 +397,25 @@ export const useUserData = () => {
         return { error };
       }
 
+      // If marking as taken, also add to history
+      if (taken) {
+        const { error: historyError } = await supabase
+          .from('medication_history')
+          .insert({
+            medication_id: medicationId,
+            user_id: user.id,
+            taken_at: new Date().toISOString(),
+            scheduled_time: scheduledTime || null,
+          } as any);
+
+        if (historyError) {
+          console.error('Error adding to medication history:', historyError);
+        } else {
+          // Refetch history
+          fetchMedicationHistory();
+        }
+      }
+
       if (data) {
         setMedications(prev => prev.map(med => 
           med.id === medicationId ? { ...med, last_taken: (data as any).last_taken } : med
@@ -398,10 +429,45 @@ export const useUserData = () => {
     }
   };
 
+  const fetchMedicationHistory = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('medication_history')
+        .select('*, medications(name)')
+        .eq('user_id', user.id)
+        .order('taken_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('Error fetching medication history:', error);
+        return;
+      }
+
+      const historyWithNames = (data || []).map((entry: any) => ({
+        ...entry,
+        medication_name: entry.medications?.name || 'Unknown',
+      }));
+
+      setMedicationHistory(historyWithNames);
+    } catch (error) {
+      console.error('Error fetching medication history:', error);
+    }
+  };
+
+  // Fetch history on initial load
+  useEffect(() => {
+    if (user) {
+      fetchMedicationHistory();
+    }
+  }, [user]);
+
   return {
     profile,
     medications,
     appointments,
+    medicationHistory,
     loading,
     addMedication,
     addAppointment,
@@ -411,6 +477,7 @@ export const useUserData = () => {
     updateMedication,
     updateAppointment,
     markMedicationTaken,
+    fetchMedicationHistory,
     refetchData: fetchUserData,
   };
 };
