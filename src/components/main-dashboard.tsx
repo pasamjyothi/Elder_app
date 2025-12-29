@@ -42,7 +42,7 @@ export const MainDashboard = () => {
   const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { signOut, user } = useAuth();
-  const { profile, medications, appointments, loading, refetchData, markMedicationTaken, deleteMedication, deleteAppointment } = useUserData();
+  const { profile, medications, appointments, loading, refetchData, markMedicationTaken, deleteMedication, deleteAppointment, updateMedication, updateAppointment } = useUserData();
   const { permission, requestPermission, playVoiceAlert } = useNotifications();
 
   // Request notification permission on mount
@@ -621,12 +621,14 @@ export const MainDashboard = () => {
       <EditMedicationDialog 
         open={showEditMedDialog} 
         onOpenChange={setShowEditMedDialog} 
-        medication={editingMedication} 
+        medication={editingMedication}
+        onUpdate={updateMedication}
       />
       <EditAppointmentDialog 
         open={showEditAptDialog} 
         onOpenChange={setShowEditAptDialog} 
-        appointment={editingAppointment} 
+        appointment={editingAppointment}
+        onUpdate={updateAppointment}
       />
     </MobileContainer>
   );

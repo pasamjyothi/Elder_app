@@ -34,7 +34,7 @@ interface MedicationScreenProps {
 }
 
 export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: MedicationScreenProps) => {
-  const { medications, loading, deleteMedication, markMedicationTaken } = useUserData();
+  const { medications, loading, deleteMedication, markMedicationTaken, updateMedication } = useUserData();
   const { playVoiceAlert } = useNotifications();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -273,7 +273,8 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
       <EditMedicationDialog 
         open={showEditDialog} 
         onOpenChange={setShowEditDialog} 
-        medication={editingMedication} 
+        medication={editingMedication}
+        onUpdate={updateMedication}
       />
       <MedicationAlarmOverlay />
       

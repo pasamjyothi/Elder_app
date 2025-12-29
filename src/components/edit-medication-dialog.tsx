@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useUserData, Medication } from "@/hooks/use-user-data";
+import { Medication } from "@/hooks/use-user-data";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X } from "lucide-react";
 
@@ -13,9 +13,10 @@ interface EditMedicationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   medication: Medication | null;
+  onUpdate: (medicationId: string, updates: Partial<Omit<Medication, 'id' | 'user_id'>>) => Promise<{ error: any } | { data: any; error: null } | undefined>;
 }
 
-export const EditMedicationDialog = ({ open, onOpenChange, medication }: EditMedicationDialogProps) => {
+export const EditMedicationDialog = ({ open, onOpenChange, medication, onUpdate }: EditMedicationDialogProps) => {
   const [formData, setFormData] = useState({
     name: "",
     dosage: "",
@@ -29,7 +30,6 @@ export const EditMedicationDialog = ({ open, onOpenChange, medication }: EditMed
   });
   const [reminderTimes, setReminderTimes] = useState<string[]>(["08:00"]);
   const [loading, setLoading] = useState(false);
-  const { updateMedication } = useUserData();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export const EditMedicationDialog = ({ open, onOpenChange, medication }: EditMed
 
     setLoading(true);
     try {
-      const result = await updateMedication(medication.id, {
+      const result = await onUpdate(medication.id, {
         name: formData.name,
         dosage: formData.dosage,
         frequency: formData.frequency,
