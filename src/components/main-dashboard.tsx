@@ -43,7 +43,7 @@ export const MainDashboard = () => {
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { signOut, user } = useAuth();
   const { profile, medications, appointments, loading, refetchData, markMedicationTaken, deleteMedication, deleteAppointment, updateMedication, updateAppointment } = useUserData();
-  const { permission, requestPermission, playVoiceAlert } = useNotifications();
+  const { permission, requestPermission, playVoiceAlert, activeAlarm, dismissAlarm, snoozeAlarm } = useNotifications();
 
   // Request notification permission on mount
   useEffect(() => {
@@ -616,7 +616,14 @@ export const MainDashboard = () => {
       <BottomNavigation activeScreen={activeScreen} onNavigate={setActiveScreen} />
       
       {/* Medication Alarm Overlay */}
-      <MedicationAlarmOverlay />
+      <MedicationAlarmOverlay 
+        activeAlarm={activeAlarm}
+        onDismiss={dismissAlarm}
+        onSnooze={snoozeAlarm}
+        onMarkTaken={async (id) => {
+          await markMedicationTaken(id, true);
+        }}
+      />
       
       {/* Edit Dialogs */}
       <EditMedicationDialog 
