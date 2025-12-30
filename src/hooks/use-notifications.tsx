@@ -283,11 +283,21 @@ export const useNotifications = () => {
     });
 
     medications.forEach(medication => {
-      if (!medication.enable_notifications || !medication.reminder_times || !medication.is_active) return;
+      if (!medication.enable_notifications || !medication.reminder_times || medication.reminder_times.length === 0 || !medication.is_active) {
+        console.log('[notifications] skipping medication:', medication.name, { 
+          notifications: medication.enable_notifications, 
+          times: medication.reminder_times?.length,
+          active: medication.is_active 
+        });
+        return;
+      }
 
       medication.reminder_times.forEach((timeString, index) => {
         const now = new Date();
-        const [hours, minutes] = timeString.split(':').map(Number);
+        // Handle both "HH:MM" and "HH:MM:SS" formats
+        const timeParts = timeString.split(':').map(Number);
+        const hours = timeParts[0];
+        const minutes = timeParts[1];
         
         const notificationTime = new Date();
         notificationTime.setHours(hours, minutes, 0, 0);
@@ -300,8 +310,15 @@ export const useNotifications = () => {
         const timeUntilNotification = notificationTime.getTime() - now.getTime();
         const timeoutKey = `med-${medication.id}-${index}`;
 
-        if (timeUntilNotification > 0) {
+        console.log('[notifications] scheduling medication:', medication.name, {
+          scheduledFor: notificationTime.toLocaleString(),
+          timeUntilMs: timeUntilNotification,
+          timeUntilMins: Math.round(timeUntilNotification / 60000)
+        });
+
+        if (timeUntilNotification > 0 && timeUntilNotification < 24 * 60 * 60 * 1000) {
           const timeout = setTimeout(async () => {
+            console.log('[notifications] FIRING medication reminder for:', medication.name);
             // Build voice message with instructions
             const instructionText = medication.instructions 
               ? `. Instructions: ${medication.instructions}` 
