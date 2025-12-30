@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useAuth } from './use-auth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -57,7 +57,27 @@ export interface MedicationHistoryEntry {
   medication_name?: string;
 }
 
-export const useUserData = () => {
+interface UserDataContextType {
+  profile: UserProfile | null;
+  medications: Medication[];
+  appointments: Appointment[];
+  medicationHistory: MedicationHistoryEntry[];
+  loading: boolean;
+  addMedication: (medication: Omit<Medication, 'id' | 'user_id'>) => Promise<{ data?: Medication; error: any } | undefined>;
+  addAppointment: (appointment: Omit<Appointment, 'id' | 'user_id'>) => Promise<{ data?: Appointment; error: any } | undefined>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<{ data?: UserProfile; error: any } | undefined>;
+  deleteMedication: (medicationId: string) => Promise<{ error: any } | undefined>;
+  deleteAppointment: (appointmentId: string) => Promise<{ error: any } | undefined>;
+  updateMedication: (medicationId: string, updates: Partial<Omit<Medication, 'id' | 'user_id'>>) => Promise<{ data?: Medication; error: any } | undefined>;
+  updateAppointment: (appointmentId: string, updates: Partial<Omit<Appointment, 'id' | 'user_id'>>) => Promise<{ data?: Appointment; error: any } | undefined>;
+  markMedicationTaken: (medicationId: string, taken: boolean, scheduledTime?: string) => Promise<{ data?: any; error: any } | undefined>;
+  fetchMedicationHistory: () => Promise<void>;
+  refetchData: () => Promise<void>;
+}
+
+const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
+
+export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -75,7 +95,7 @@ export const useUserData = () => {
         .on(
           'postgres_changes',
           {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            event: '*',
             schema: 'public',
             table: 'medications',
             filter: `user_id=eq.${user.id}`
@@ -135,15 +155,34 @@ export const useUserData = () => {
         )
         .subscribe();
 
-      // Cleanup subscriptions on unmount
+      // Set up real-time subscription for medication history
+      const historyChannel = supabase
+        .channel('medication-history-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'medication_history',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            // Refetch history on new entries
+            fetchMedicationHistory();
+          }
+        )
+        .subscribe();
+
       return () => {
         supabase.removeChannel(medicationsChannel);
         supabase.removeChannel(appointmentsChannel);
+        supabase.removeChannel(historyChannel);
       };
     } else {
       setProfile(null);
       setMedications([]);
       setAppointments([]);
+      setMedicationHistory([]);
       setLoading(false);
     }
   }, [user]);
@@ -154,7 +193,6 @@ export const useUserData = () => {
     try {
       setLoading(true);
       
-      // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -167,7 +205,6 @@ export const useUserData = () => {
         setProfile(profileData);
       }
 
-      // Fetch medications
       const { data: medicationsData, error: medicationsError } = await supabase
         .from('medications')
         .select('*')
@@ -181,7 +218,6 @@ export const useUserData = () => {
         setMedications(medicationsData || []);
       }
 
-      // Fetch upcoming appointments
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select('*')
@@ -194,6 +230,8 @@ export const useUserData = () => {
       } else {
         setAppointments(appointmentsData || []);
       }
+
+      await fetchMedicationHistory();
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
@@ -216,7 +254,6 @@ export const useUserData = () => {
         return { error };
       }
 
-      setMedications(prev => [data, ...prev]);
       return { data, error: null };
     } catch (error) {
       console.error('Error adding medication:', error);
@@ -239,9 +276,6 @@ export const useUserData = () => {
         return { error };
       }
 
-      setAppointments(prev => [...prev, data].sort((a, b) => 
-        new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime()
-      ));
       return { data, error: null };
     } catch (error) {
       console.error('Error adding appointment:', error);
@@ -288,8 +322,6 @@ export const useUserData = () => {
         return { error };
       }
 
-      // Immediately update local state (real-time will also trigger, but this is faster)
-      setMedications(prev => prev.filter(med => med.id !== medicationId));
       return { error: null };
     } catch (error) {
       console.error('Error deleting medication:', error);
@@ -312,8 +344,6 @@ export const useUserData = () => {
         return { error };
       }
 
-      // Immediately update local state
-      setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
       return { error: null };
     } catch (error) {
       console.error('Error deleting appointment:', error);
@@ -338,10 +368,6 @@ export const useUserData = () => {
         return { error };
       }
 
-      // Immediately update local state
-      setMedications(prev => prev.map(med => 
-        med.id === medicationId ? { ...med, ...data } : med
-      ));
       return { data, error: null };
     } catch (error) {
       console.error('Error updating medication:', error);
@@ -366,10 +392,6 @@ export const useUserData = () => {
         return { error };
       }
 
-      // Immediately update local state
-      setAppointments(prev => prev.map(apt => 
-        apt.id === appointmentId ? { ...apt, ...data } : apt
-      ));
       return { data, error: null };
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -381,7 +403,6 @@ export const useUserData = () => {
     if (!user) return;
 
     try {
-      // Update last_taken on medication
       const { data, error } = await supabase
         .from('medications')
         .update({ 
@@ -397,7 +418,6 @@ export const useUserData = () => {
         return { error };
       }
 
-      // If marking as taken, also add to history
       if (taken) {
         const { error: historyError } = await supabase
           .from('medication_history')
@@ -410,16 +430,7 @@ export const useUserData = () => {
 
         if (historyError) {
           console.error('Error adding to medication history:', historyError);
-        } else {
-          // Refetch history
-          fetchMedicationHistory();
         }
-      }
-
-      if (data) {
-        setMedications(prev => prev.map(med => 
-          med.id === medicationId ? { ...med, last_taken: (data as any).last_taken } : med
-        ));
       }
       
       return { data, error: null };
@@ -456,28 +467,33 @@ export const useUserData = () => {
     }
   };
 
-  // Fetch history on initial load
-  useEffect(() => {
-    if (user) {
-      fetchMedicationHistory();
-    }
-  }, [user]);
+  return (
+    <UserDataContext.Provider value={{
+      profile,
+      medications,
+      appointments,
+      medicationHistory,
+      loading,
+      addMedication,
+      addAppointment,
+      updateProfile,
+      deleteMedication,
+      deleteAppointment,
+      updateMedication,
+      updateAppointment,
+      markMedicationTaken,
+      fetchMedicationHistory,
+      refetchData: fetchUserData,
+    }}>
+      {children}
+    </UserDataContext.Provider>
+  );
+};
 
-  return {
-    profile,
-    medications,
-    appointments,
-    medicationHistory,
-    loading,
-    addMedication,
-    addAppointment,
-    updateProfile,
-    deleteMedication,
-    deleteAppointment,
-    updateMedication,
-    updateAppointment,
-    markMedicationTaken,
-    fetchMedicationHistory,
-    refetchData: fetchUserData,
-  };
+export const useUserData = () => {
+  const context = useContext(UserDataContext);
+  if (context === undefined) {
+    throw new Error('useUserData must be used within a UserDataProvider');
+  }
+  return context;
 };
