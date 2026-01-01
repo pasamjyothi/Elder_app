@@ -35,6 +35,7 @@ export const useNotifications = () => {
     type: 'medication' | 'appointment';
     title: string;
     message: string;
+    scheduledTime?: string;
     audio?: HTMLAudioElement;
   } | null>(null);
   
@@ -132,7 +133,7 @@ export const useNotifications = () => {
   }, []);
 
   // Play voice alert using ElevenLabs TTS (with browser TTS fallback)
-  const playVoiceAlert = useCallback(async (text: string, medicationId?: string, medicationType?: 'medication' | 'appointment') => {
+  const playVoiceAlert = useCallback(async (text: string, medicationId?: string, medicationType?: 'medication' | 'appointment', scheduledTime?: string) => {
     try {
       console.log("Playing voice alert for:", text);
 
@@ -143,6 +144,7 @@ export const useNotifications = () => {
           type: medicationType || 'medication',
           title: medicationType === 'appointment' ? 'Appointment Reminder' : 'Medication Reminder',
           message: text,
+          scheduledTime,
         });
       }
 
@@ -234,7 +236,8 @@ export const useNotifications = () => {
     soundAlert = true,
     itemId?: string,
     type: 'medication' | 'appointment' = 'medication',
-    customVoiceMessage?: string
+    customVoiceMessage?: string,
+    scheduledTime?: string
   ) => {
     console.log('[notifications] showNotification', { title, type, soundAlert, itemId });
 
@@ -265,7 +268,7 @@ export const useNotifications = () => {
       const voiceText = customVoiceMessage || (type === 'medication'
         ? `It's time to take your medication. ${message}`
         : `Reminder: ${message}`);
-      await playVoiceAlert(voiceText, itemId, type);
+      await playVoiceAlert(voiceText, itemId, type, scheduledTime);
     }
 
     return notification;
@@ -331,7 +334,8 @@ export const useNotifications = () => {
               medication.sound_alert,
               medication.id,
               'medication',
-              voiceMessage
+              voiceMessage,
+              timeString // Pass scheduled time
             );
           }, timeUntilNotification);
           
