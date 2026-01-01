@@ -36,7 +36,7 @@ interface MedicationScreenProps {
 }
 
 export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: MedicationScreenProps) => {
-  const { medications, medicationHistory, loading, deleteMedication, markMedicationTaken, updateMedication } = useUserData();
+  const { medications, medicationHistory, loading, deleteMedication, markMedicationTaken, updateMedication, updateAppointment } = useUserData();
   const { playVoiceAlert, activeAlarm, dismissAlarm, snoozeAlarm } = useNotifications();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -293,6 +293,9 @@ export const MedicationScreen = ({ onBack, onNavigate, activeScreen }: Medicatio
         onSnooze={snoozeAlarm}
         onMarkTaken={async (id, scheduledTime) => {
           await markMedicationTaken(id, true, scheduledTime);
+        }}
+        onMarkAppointmentComplete={async (id) => {
+          await updateAppointment(id, { status: 'completed' });
         }}
       />
       
