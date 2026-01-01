@@ -242,6 +242,11 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const addMedication = async (medication: Omit<Medication, 'id' | 'user_id'>) => {
     if (!user) return;
 
+    // Optimistic update - add temp item immediately
+    const tempId = `temp-${Date.now()}`;
+    const tempMedication = { ...medication, id: tempId, user_id: user.id } as Medication;
+    setMedications(prev => [tempMedication, ...prev]);
+
     try {
       const { data, error } = await supabase
         .from('medications')
@@ -250,12 +255,17 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (error) {
+        // Rollback on error
+        setMedications(prev => prev.filter(m => m.id !== tempId));
         console.error('Error adding medication:', error);
         return { error };
       }
 
+      // Replace temp with real data
+      setMedications(prev => prev.map(m => m.id === tempId ? data : m));
       return { data, error: null };
     } catch (error) {
+      setMedications(prev => prev.filter(m => m.id !== tempId));
       console.error('Error adding medication:', error);
       return { error };
     }
@@ -263,6 +273,15 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
 
   const addAppointment = async (appointment: Omit<Appointment, 'id' | 'user_id'>) => {
     if (!user) return;
+
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const tempAppointment = { ...appointment, id: tempId, user_id: user.id } as Appointment;
+    setAppointments(prev => 
+      [...prev, tempAppointment].sort((a, b) => 
+        new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime()
+      )
+    );
 
     try {
       const { data, error } = await supabase
@@ -272,12 +291,15 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (error) {
+        setAppointments(prev => prev.filter(a => a.id !== tempId));
         console.error('Error adding appointment:', error);
         return { error };
       }
 
+      setAppointments(prev => prev.map(a => a.id === tempId ? data : a));
       return { data, error: null };
     } catch (error) {
+      setAppointments(prev => prev.filter(a => a.id !== tempId));
       console.error('Error adding appointment:', error);
       return { error };
     }
@@ -310,6 +332,10 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const deleteMedication = async (medicationId: string) => {
     if (!user) return;
 
+    // Optimistic delete
+    const previousMedications = medications;
+    setMedications(prev => prev.filter(m => m.id !== medicationId));
+
     try {
       const { error } = await supabase
         .from('medications')
@@ -318,12 +344,14 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', user.id);
 
       if (error) {
+        setMedications(previousMedications);
         console.error('Error deleting medication:', error);
         return { error };
       }
 
       return { error: null };
     } catch (error) {
+      setMedications(previousMedications);
       console.error('Error deleting medication:', error);
       return { error };
     }
@@ -332,6 +360,10 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const deleteAppointment = async (appointmentId: string) => {
     if (!user) return;
 
+    // Optimistic delete
+    const previousAppointments = appointments;
+    setAppointments(prev => prev.filter(a => a.id !== appointmentId));
+
     try {
       const { error } = await supabase
         .from('appointments')
@@ -340,12 +372,14 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', user.id);
 
       if (error) {
+        setAppointments(previousAppointments);
         console.error('Error deleting appointment:', error);
         return { error };
       }
 
       return { error: null };
     } catch (error) {
+      setAppointments(previousAppointments);
       console.error('Error deleting appointment:', error);
       return { error };
     }
@@ -353,6 +387,10 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
 
   const updateMedication = async (medicationId: string, updates: Partial<Omit<Medication, 'id' | 'user_id'>>) => {
     if (!user) return;
+
+    // Optimistic update
+    const previousMedications = medications;
+    setMedications(prev => prev.map(m => m.id === medicationId ? { ...m, ...updates } : m));
 
     try {
       const { data, error } = await supabase
@@ -364,12 +402,15 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (error) {
+        setMedications(previousMedications);
         console.error('Error updating medication:', error);
         return { error };
       }
 
+      setMedications(prev => prev.map(m => m.id === medicationId ? data : m));
       return { data, error: null };
     } catch (error) {
+      setMedications(previousMedications);
       console.error('Error updating medication:', error);
       return { error };
     }
@@ -377,6 +418,10 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
 
   const updateAppointment = async (appointmentId: string, updates: Partial<Omit<Appointment, 'id' | 'user_id'>>) => {
     if (!user) return;
+
+    // Optimistic update
+    const previousAppointments = appointments;
+    setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, ...updates } : a));
 
     try {
       const { data, error } = await supabase
@@ -388,12 +433,15 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (error) {
+        setAppointments(previousAppointments);
         console.error('Error updating appointment:', error);
         return { error };
       }
 
+      setAppointments(prev => prev.map(a => a.id === appointmentId ? data : a));
       return { data, error: null };
     } catch (error) {
+      setAppointments(previousAppointments);
       console.error('Error updating appointment:', error);
       return { error };
     }
