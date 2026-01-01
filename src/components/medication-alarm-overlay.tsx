@@ -11,11 +11,12 @@ interface MedicationAlarmOverlayProps {
     type: 'medication' | 'appointment';
     title: string;
     message: string;
+    scheduledTime?: string;
     audio?: HTMLAudioElement;
   } | null;
   onDismiss: () => void;
   onSnooze: (minutes: number) => void;
-  onMarkTaken: (id: string) => Promise<void>;
+  onMarkTaken: (id: string, scheduledTime?: string) => Promise<void>;
 }
 
 export const MedicationAlarmOverlay = ({ 
@@ -35,7 +36,7 @@ export const MedicationAlarmOverlay = ({
     
     try {
       if (activeAlarm.type === 'medication') {
-        await onMarkTaken(activeAlarm.id);
+        await onMarkTaken(activeAlarm.id, activeAlarm.scheduledTime);
         toast.success("Medication marked as taken!");
       } else {
         toast.success("Appointment reminder acknowledged!");

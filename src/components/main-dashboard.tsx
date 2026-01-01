@@ -620,8 +620,8 @@ export const MainDashboard = () => {
         activeAlarm={activeAlarm}
         onDismiss={dismissAlarm}
         onSnooze={snoozeAlarm}
-        onMarkTaken={async (id) => {
-          await markMedicationTaken(id, true);
+        onMarkTaken={async (id, scheduledTime) => {
+          await markMedicationTaken(id, true, scheduledTime);
         }}
       />
       
