@@ -450,11 +450,33 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const markMedicationTaken = async (medicationId: string, taken: boolean, scheduledTime?: string) => {
     if (!user) return;
 
+    // Optimistic update so dashboard/screen updates immediately
+    const previousMedications = medications;
+    const previousHistory = medicationHistory;
+
+    const nowIso = new Date().toISOString();
+    setMedications(prev => prev.map(m => m.id === medicationId ? { ...m, last_taken: taken ? nowIso : null } : m));
+
+    if (taken) {
+      const medicationName = medications.find(m => m.id === medicationId)?.name;
+      const optimisticHistory: MedicationHistoryEntry = {
+        id: `temp-${Date.now()}`,
+        medication_id: medicationId,
+        user_id: user.id,
+        taken_at: nowIso,
+        scheduled_time: scheduledTime || null,
+        notes: null,
+        medication_name: medicationName,
+      } as any;
+
+      setMedicationHistory(prev => [optimisticHistory, ...prev].slice(0, 100));
+    }
+
     try {
       const { data, error } = await supabase
         .from('medications')
-        .update({ 
-          last_taken: taken ? new Date().toISOString() : null 
+        .update({
+          last_taken: taken ? nowIso : null,
         } as any)
         .eq('id', medicationId)
         .eq('user_id', user.id)
@@ -462,6 +484,8 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         .maybeSingle();
 
       if (error) {
+        setMedications(previousMedications);
+        setMedicationHistory(previousHistory);
         console.error('Error updating medication:', error);
         return { error };
       }
@@ -472,17 +496,24 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
           .insert({
             medication_id: medicationId,
             user_id: user.id,
-            taken_at: new Date().toISOString(),
+            taken_at: nowIso,
             scheduled_time: scheduledTime || null,
           } as any);
 
         if (historyError) {
+          // Roll back history only; keep last_taken because it's the main UX indicator
+          setMedicationHistory(previousHistory);
           console.error('Error adding to medication history:', historyError);
+        } else {
+          // Replace optimistic history by refetching (ensures correct IDs and join name)
+          fetchMedicationHistory();
         }
       }
-      
+
       return { data, error: null };
     } catch (error) {
+      setMedications(previousMedications);
+      setMedicationHistory(previousHistory);
       console.error('Error updating medication:', error);
       return { error };
     }
