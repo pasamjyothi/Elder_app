@@ -623,6 +623,9 @@ export const MainDashboard = () => {
         onMarkTaken={async (id, scheduledTime) => {
           await markMedicationTaken(id, true, scheduledTime);
         }}
+        onMarkAppointmentComplete={async (id) => {
+          await updateAppointment(id, { status: 'completed' });
+        }}
       />
       
       {/* Edit Dialogs */}

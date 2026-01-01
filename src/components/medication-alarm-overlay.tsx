@@ -17,13 +17,15 @@ interface MedicationAlarmOverlayProps {
   onDismiss: () => void;
   onSnooze: (minutes: number) => void;
   onMarkTaken: (id: string, scheduledTime?: string) => Promise<void>;
+  onMarkAppointmentComplete?: (id: string) => Promise<void>;
 }
 
 export const MedicationAlarmOverlay = ({ 
   activeAlarm, 
   onDismiss, 
   onSnooze, 
-  onMarkTaken 
+  onMarkTaken,
+  onMarkAppointmentComplete
 }: MedicationAlarmOverlayProps) => {
   const [showSnoozeOptions, setShowSnoozeOptions] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,11 +41,17 @@ export const MedicationAlarmOverlay = ({
         await onMarkTaken(activeAlarm.id, activeAlarm.scheduledTime);
         toast.success("Medication marked as taken!");
       } else {
-        toast.success("Appointment reminder acknowledged!");
+        // Mark appointment as completed
+        if (onMarkAppointmentComplete) {
+          await onMarkAppointmentComplete(activeAlarm.id);
+          toast.success("Appointment marked as completed!");
+        } else {
+          toast.success("Appointment reminder acknowledged!");
+        }
       }
       onDismiss();
     } catch (error) {
-      toast.error("Failed to mark medication as taken");
+      toast.error(activeAlarm.type === 'medication' ? "Failed to mark medication as taken" : "Failed to mark appointment as completed");
     } finally {
       setIsProcessing(false);
     }
@@ -117,7 +125,7 @@ export const MedicationAlarmOverlay = ({
                   className="bg-care-green hover:bg-care-green/90 text-white flex-1 h-12 text-base"
                 >
                   <CheckCircle className="h-5 w-5 mr-2" />
-                  {isAppointment ? 'Acknowledge' : 'Mark as Taken'}
+                  {isAppointment ? 'Mark Complete' : 'Mark as Taken'}
                 </Button>
               </div>
               
