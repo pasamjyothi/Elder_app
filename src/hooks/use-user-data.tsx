@@ -57,11 +57,24 @@ export interface MedicationHistoryEntry {
   medication_name?: string;
 }
 
+export interface AppointmentHistoryEntry {
+  id: string;
+  appointment_id: string;
+  user_id: string;
+  action_type: 'reminder_sent' | 'completed' | 'snoozed' | 'dismissed';
+  action_at: string;
+  scheduled_reminder_time?: string;
+  notes?: string;
+  doctor_name?: string;
+  appointment_type?: string;
+}
+
 interface UserDataContextType {
   profile: UserProfile | null;
   medications: Medication[];
   appointments: Appointment[];
   medicationHistory: MedicationHistoryEntry[];
+  appointmentHistory: AppointmentHistoryEntry[];
   loading: boolean;
   addMedication: (medication: Omit<Medication, 'id' | 'user_id'>) => Promise<{ data?: Medication; error: any } | undefined>;
   addAppointment: (appointment: Omit<Appointment, 'id' | 'user_id'>) => Promise<{ data?: Appointment; error: any } | undefined>;
@@ -71,7 +84,9 @@ interface UserDataContextType {
   updateMedication: (medicationId: string, updates: Partial<Omit<Medication, 'id' | 'user_id'>>) => Promise<{ data?: Medication; error: any } | undefined>;
   updateAppointment: (appointmentId: string, updates: Partial<Omit<Appointment, 'id' | 'user_id'>>) => Promise<{ data?: Appointment; error: any } | undefined>;
   markMedicationTaken: (medicationId: string, taken: boolean, scheduledTime?: string) => Promise<{ data?: any; error: any } | undefined>;
+  markAppointmentComplete: (appointmentId: string, scheduledReminderTime?: string) => Promise<{ data?: any; error: any } | undefined>;
   fetchMedicationHistory: () => Promise<void>;
+  fetchAppointmentHistory: () => Promise<void>;
   refetchData: () => Promise<void>;
 }
 
@@ -83,6 +98,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [medicationHistory, setMedicationHistory] = useState<MedicationHistoryEntry[]>([]);
+  const [appointmentHistory, setAppointmentHistory] = useState<AppointmentHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -183,6 +199,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       setMedications([]);
       setAppointments([]);
       setMedicationHistory([]);
+      setAppointmentHistory([]);
       setLoading(false);
     }
   }, [user]);
@@ -222,7 +239,6 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
         .from('appointments')
         .select('*')
         .eq('user_id', user.id)
-        .gte('appointment_date', new Date().toISOString())
         .order('appointment_date', { ascending: true });
 
       if (appointmentsError) {
@@ -232,6 +248,7 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       await fetchMedicationHistory();
+      await fetchAppointmentHistory();
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
@@ -546,12 +563,110 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const fetchAppointmentHistory = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('appointment_history')
+        .select('*, appointments(doctor_name, appointment_type)')
+        .eq('user_id', user.id)
+        .order('action_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('Error fetching appointment history:', error);
+        return;
+      }
+
+      const historyWithDetails = (data || []).map((entry: any) => ({
+        ...entry,
+        doctor_name: entry.appointments?.doctor_name || 'Unknown',
+        appointment_type: entry.appointments?.appointment_type || 'Unknown',
+      }));
+
+      setAppointmentHistory(historyWithDetails);
+    } catch (error) {
+      console.error('Error fetching appointment history:', error);
+    }
+  };
+
+  const markAppointmentComplete = async (appointmentId: string, scheduledReminderTime?: string) => {
+    if (!user) return;
+
+    // Optimistic update
+    const previousAppointments = appointments;
+    const previousHistory = appointmentHistory;
+
+    const nowIso = new Date().toISOString();
+    setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'completed' } : a));
+
+    const appointment = appointments.find(a => a.id === appointmentId);
+    const optimisticHistory: AppointmentHistoryEntry = {
+      id: `temp-${Date.now()}`,
+      appointment_id: appointmentId,
+      user_id: user.id,
+      action_type: 'completed',
+      action_at: nowIso,
+      scheduled_reminder_time: scheduledReminderTime || null,
+      notes: null,
+      doctor_name: appointment?.doctor_name,
+      appointment_type: appointment?.appointment_type,
+    } as any;
+
+    setAppointmentHistory(prev => [optimisticHistory, ...prev].slice(0, 100));
+
+    try {
+      // Update appointment status
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ status: 'completed' } as any)
+        .eq('id', appointmentId)
+        .eq('user_id', user.id)
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        setAppointments(previousAppointments);
+        setAppointmentHistory(previousHistory);
+        console.error('Error updating appointment:', error);
+        return { error };
+      }
+
+      // Add to appointment history
+      const { error: historyError } = await supabase
+        .from('appointment_history')
+        .insert({
+          appointment_id: appointmentId,
+          user_id: user.id,
+          action_type: 'completed',
+          action_at: nowIso,
+          scheduled_reminder_time: scheduledReminderTime || null,
+        } as any);
+
+      if (historyError) {
+        setAppointmentHistory(previousHistory);
+        console.error('Error adding to appointment history:', historyError);
+      } else {
+        fetchAppointmentHistory();
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      setAppointments(previousAppointments);
+      setAppointmentHistory(previousHistory);
+      console.error('Error updating appointment:', error);
+      return { error };
+    }
+  };
+
   return (
     <UserDataContext.Provider value={{
       profile,
       medications,
       appointments,
       medicationHistory,
+      appointmentHistory,
       loading,
       addMedication,
       addAppointment,
@@ -561,7 +676,9 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
       updateMedication,
       updateAppointment,
       markMedicationTaken,
+      markAppointmentComplete,
       fetchMedicationHistory,
+      fetchAppointmentHistory,
       refetchData: fetchUserData,
     }}>
       {children}

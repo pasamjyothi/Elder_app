@@ -42,7 +42,7 @@ export const MainDashboard = () => {
   const [editingMedication, setEditingMedication] = useState<Medication | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const { signOut, user } = useAuth();
-  const { profile, medications, appointments, loading, refetchData, markMedicationTaken, deleteMedication, deleteAppointment, updateMedication, updateAppointment } = useUserData();
+  const { profile, medications, appointments, loading, refetchData, markMedicationTaken, deleteMedication, deleteAppointment, updateMedication, updateAppointment, markAppointmentComplete } = useUserData();
   const { permission, requestPermission, playVoiceAlert, activeAlarm, dismissAlarm, snoozeAlarm } = useNotifications();
 
   // Request notification permission on mount
@@ -158,7 +158,8 @@ export const MainDashboard = () => {
         await markMedicationTaken(itemId, true);
       }
     } else {
-      setCompletedItems(prev => new Set([...prev, itemId]));
+      // Mark appointment as complete in database with history tracking
+      await markAppointmentComplete(itemId);
     }
   };
 
@@ -486,7 +487,7 @@ export const MainDashboard = () => {
                     return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
                   };
 
-                  const isCompleted = completedItems.has(appointment.id);
+                  const isCompleted = appointment.status === 'completed';
                   const statusColor = isCompleted ? 'border-l-green-500' : 'border-l-care-blue';
                   const statusBg = isCompleted ? 'bg-green-50' : 'bg-care-blue/5';
 
@@ -624,7 +625,7 @@ export const MainDashboard = () => {
           await markMedicationTaken(id, true, scheduledTime);
         }}
         onMarkAppointmentComplete={async (id) => {
-          await updateAppointment(id, { status: 'completed' });
+          await markAppointmentComplete(id);
         }}
       />
       

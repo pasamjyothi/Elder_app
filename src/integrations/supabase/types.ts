@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_history: {
+        Row: {
+          action_at: string
+          action_type: string
+          appointment_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          scheduled_reminder_time: string | null
+          user_id: string
+        }
+        Insert: {
+          action_at?: string
+          action_type: string
+          appointment_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          scheduled_reminder_time?: string | null
+          user_id: string
+        }
+        Update: {
+          action_at?: string
+          action_type?: string
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          scheduled_reminder_time?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_history_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           appointment_date: string
