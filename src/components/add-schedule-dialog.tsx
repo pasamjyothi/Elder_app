@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, Plus, Clock, Pill } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Calendar, Plus, Pill, X } from "lucide-react";
 import { useUserData } from "@/hooks/use-user-data";
 import { toast } from "sonner";
 
@@ -26,7 +27,11 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
     instructions: "",
     start_date: new Date().toISOString().split('T')[0],
     end_date: "",
+    enable_notifications: true,
+    sound_alert: true,
   });
+
+  const [reminderTimes, setReminderTimes] = useState<string[]>(["08:00"]);
 
   const [appointmentData, setAppointmentData] = useState({
     doctor_name: "",
@@ -35,7 +40,23 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
     duration_minutes: 30,
     is_virtual: false,
     notes: "",
+    reminder_minutes: 30,
+    enable_notifications: true,
   });
+
+  const addReminderTime = () => {
+    setReminderTimes([...reminderTimes, "08:00"]);
+  };
+
+  const removeReminderTime = (index: number) => {
+    setReminderTimes(reminderTimes.filter((_, i) => i !== index));
+  };
+
+  const updateReminderTime = (index: number, time: string) => {
+    const updated = [...reminderTimes];
+    updated[index] = time;
+    setReminderTimes(updated);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +68,7 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
           ...medicationData,
           end_date: medicationData.end_date || null,
           is_active: true,
+          reminder_times: medicationData.enable_notifications ? reminderTimes : [],
         });
         toast.success("Medication added successfully");
       } else {
@@ -54,6 +76,7 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
           ...appointmentData,
           appointment_date: new Date(appointmentData.appointment_date).toISOString(),
           status: "scheduled",
+          notification_sent: false,
         });
         toast.success("Appointment scheduled successfully");
       }
@@ -66,7 +89,10 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
         instructions: "",
         start_date: new Date().toISOString().split('T')[0],
         end_date: "",
+        enable_notifications: true,
+        sound_alert: true,
       });
+      setReminderTimes(["08:00"]);
       setAppointmentData({
         doctor_name: "",
         appointment_type: "",
@@ -74,6 +100,8 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
         duration_minutes: 30,
         is_virtual: false,
         notes: "",
+        reminder_minutes: 30,
+        enable_notifications: true,
       });
 
       setOpen(false);
@@ -93,7 +121,7 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
           Add
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[95vw] max-w-md">
+      <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add to Schedule</DialogTitle>
         </DialogHeader>
@@ -196,6 +224,69 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
                   rows={2}
                 />
               </div>
+
+              {/* Medication Reminder Settings */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="font-medium text-care-blue">Reminder Settings</h3>
+                
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="enable_med_notifications">Enable Reminders</Label>
+                  <Switch
+                    id="enable_med_notifications"
+                    checked={medicationData.enable_notifications}
+                    onCheckedChange={(checked) => setMedicationData({ ...medicationData, enable_notifications: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="sound_alert">Sound Alert (Buzz)</Label>
+                  <Switch
+                    id="sound_alert"
+                    checked={medicationData.sound_alert}
+                    onCheckedChange={(checked) => setMedicationData({ ...medicationData, sound_alert: checked })}
+                  />
+                </div>
+
+                {medicationData.enable_notifications && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Reminder Times</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addReminderTime}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    {reminderTimes.map((time, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input
+                          type="time"
+                          value={time}
+                          onChange={(e) => updateReminderTime(index, e.target.value)}
+                          className="flex-1"
+                        />
+                        {reminderTimes.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeReminderTime(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <p className="text-xs text-muted-foreground">
+                      Set multiple times for medications that need to be taken throughout the day
+                    </p>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <>
@@ -211,14 +302,24 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
               </div>
 
               <div>
-                <Label htmlFor="appointment-type">Appointment Type *</Label>
-                <Input
-                  id="appointment-type"
+                <Label>Appointment Type *</Label>
+                <Select
                   value={appointmentData.appointment_type}
-                  onChange={(e) => setAppointmentData({ ...appointmentData, appointment_type: e.target.value })}
-                  placeholder="e.g., Consultation, Follow-up, Checkup"
-                  required
-                />
+                  onValueChange={(value) => setAppointmentData({ ...appointmentData, appointment_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select appointment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="General Checkup">General Checkup</SelectItem>
+                    <SelectItem value="Follow-up">Follow-up</SelectItem>
+                    <SelectItem value="Consultation">Consultation</SelectItem>
+                    <SelectItem value="Emergency">Emergency</SelectItem>
+                    <SelectItem value="Specialist">Specialist</SelectItem>
+                    <SelectItem value="Lab Results">Lab Results</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -228,12 +329,13 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
                   type="datetime-local"
                   value={appointmentData.appointment_date}
                   onChange={(e) => setAppointmentData({ ...appointmentData, appointment_date: e.target.value })}
+                  min={new Date().toISOString().slice(0, 16)}
                   required
                 />
               </div>
 
               <div>
-                <Label>Duration (minutes)</Label>
+                <Label>Duration</Label>
                 <Select 
                   value={appointmentData.duration_minutes.toString()} 
                   onValueChange={(value) => setAppointmentData({ ...appointmentData, duration_minutes: parseInt(value) })}
@@ -247,24 +349,18 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
                     <SelectItem value="45">45 minutes</SelectItem>
                     <SelectItem value="60">1 hour</SelectItem>
                     <SelectItem value="90">1.5 hours</SelectItem>
+                    <SelectItem value="120">2 hours</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div>
-                <Label>Appointment Type</Label>
-                <Select 
-                  value={appointmentData.is_virtual.toString()} 
-                  onValueChange={(value) => setAppointmentData({ ...appointmentData, is_virtual: value === "true" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="false">In-person</SelectItem>
-                    <SelectItem value="true">Virtual/Telemedicine</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="is_virtual">Virtual Appointment</Label>
+                <Switch
+                  id="is_virtual"
+                  checked={appointmentData.is_virtual}
+                  onCheckedChange={(checked) => setAppointmentData({ ...appointmentData, is_virtual: checked })}
+                />
               </div>
 
               <div>
@@ -276,6 +372,42 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
                   placeholder="Additional notes..."
                   rows={2}
                 />
+              </div>
+
+              {/* Appointment Reminder Settings */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="font-medium text-care-blue">Reminder Settings</h3>
+                
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="enable_appt_notifications">Enable Reminder</Label>
+                  <Switch
+                    id="enable_appt_notifications"
+                    checked={appointmentData.enable_notifications}
+                    onCheckedChange={(checked) => setAppointmentData({ ...appointmentData, enable_notifications: checked })}
+                  />
+                </div>
+
+                {appointmentData.enable_notifications && (
+                  <div>
+                    <Label htmlFor="reminder_minutes">Remind me (minutes before)</Label>
+                    <Select
+                      value={appointmentData.reminder_minutes.toString()}
+                      onValueChange={(value) => setAppointmentData({ ...appointmentData, reminder_minutes: parseInt(value) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 minutes</SelectItem>
+                        <SelectItem value="15">15 minutes</SelectItem>
+                        <SelectItem value="30">30 minutes</SelectItem>
+                        <SelectItem value="60">1 hour</SelectItem>
+                        <SelectItem value="120">2 hours</SelectItem>
+                        <SelectItem value="1440">1 day</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </>
           )}
