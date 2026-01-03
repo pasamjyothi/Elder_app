@@ -39,6 +39,9 @@ export const useNotifications = () => {
     audio?: HTMLAudioElement;
   } | null>(null);
   
+  const alarmIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const alarmAudioRef = useRef<HTMLAudioElement | null>(null);
+  
   const scheduledTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Request notification permission
@@ -65,44 +68,86 @@ export const useNotifications = () => {
     }
   }, []);
 
-  // Fallback bell sound
-  const playBellSound = useCallback(() => {
+  // Trigger device vibration if supported
+  const triggerVibration = useCallback(() => {
+    if ('vibrate' in navigator) {
+      // Vibration pattern: vibrate 500ms, pause 200ms, vibrate 500ms
+      navigator.vibrate([500, 200, 500, 200, 500]);
+    }
+  }, []);
+
+  // Stop all alarm sounds and intervals
+  const stopAlarmSounds = useCallback(() => {
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = null;
+    }
+    if (alarmAudioRef.current) {
+      alarmAudioRef.current.pause();
+      alarmAudioRef.current.currentTime = 0;
+      alarmAudioRef.current = null;
+    }
+    // Stop vibration
+    if ('vibrate' in navigator) {
+      navigator.vibrate(0);
+    }
+    // Stop any ongoing speech
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
+  // Fallback bell sound - more urgent and attention-grabbing
+  const playBellSound = useCallback((repeat = false) => {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-      const playBellRing = (startTime: number) => {
+      const playBellRing = (startTime: number, frequency = 800, volume = 0.6) => {
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        oscillator.frequency.setValueAtTime(800, startTime);
-        oscillator.frequency.exponentialRampToValueAtTime(600, startTime + 0.1);
+        // More urgent alternating frequencies
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+        oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.75, startTime + 0.15);
         oscillator.type = 'sine';
 
         gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(0.5, startTime + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+        gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
 
         oscillator.start(startTime);
-        oscillator.stop(startTime + 0.5);
+        oscillator.stop(startTime + 0.4);
       };
 
       const now = audioContext.currentTime;
-      for (let i = 0; i < 6; i++) {
-        const ringTime = now + (i * 0.6);
-        playBellRing(ringTime);
-        playBellRing(ringTime + 0.05);
+      // More urgent pattern: alternating high-low frequencies
+      for (let i = 0; i < 8; i++) {
+        const ringTime = now + (i * 0.45);
+        const freq = i % 2 === 0 ? 880 : 660;
+        playBellRing(ringTime, freq, 0.7);
       }
+
+      // Trigger vibration with each bell sound
+      triggerVibration();
 
       setTimeout(() => {
         audioContext.close();
-      }, 4000);
+      }, 5000);
+
+      // If repeat is enabled, set up interval to keep playing
+      if (repeat && !alarmIntervalRef.current) {
+        alarmIntervalRef.current = setInterval(() => {
+          playBellSound(false); // Play without setting up another interval
+          triggerVibration();
+        }, 6000);
+      }
     } catch (error) {
       console.error('Error playing bell sound:', error);
     }
-  }, []);
+  }, [triggerVibration]);
 
   // Browser TTS fallback (no external API)
   const speakWithBrowserTTS = useCallback(async (text: string) => {
@@ -137,6 +182,12 @@ export const useNotifications = () => {
     try {
       console.log("Playing voice alert for:", text);
 
+      // Stop any existing alarm sounds first
+      stopAlarmSounds();
+
+      // Trigger vibration immediately
+      triggerVibration();
+
       // Set active alarm state first
       if (medicationId) {
         setActiveAlarm({
@@ -162,11 +213,18 @@ export const useNotifications = () => {
       );
 
       if (!response.ok) {
-        // 401 often means invalid/blocked key (e.g., free-tier disabled). Fall back gracefully.
         console.error(`TTS request failed (${response.status}), falling back to browser TTS / bell`);
 
         const spoken = await speakWithBrowserTTS(text);
-        if (!spoken) playBellSound();
+        if (!spoken) playBellSound(true); // Enable repeating
+
+        // Set up repeating voice reminder if TTS worked
+        if (spoken) {
+          alarmIntervalRef.current = setInterval(async () => {
+            await speakWithBrowserTTS(text);
+            triggerVibration();
+          }, 8000);
+        }
 
         return;
       }
@@ -174,39 +232,55 @@ export const useNotifications = () => {
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
+      alarmAudioRef.current = audio;
 
       // Update active alarm with audio reference
       if (medicationId) {
         setActiveAlarm((prev) => (prev ? { ...prev, audio } : null));
       }
 
+      // Set up repeating audio
       audio.onended = () => {
+        // Repeat after a short pause
+        setTimeout(() => {
+          if (alarmAudioRef.current === audio) {
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+          }
+        }, 2000);
+      };
+
+      audio.onerror = () => {
         URL.revokeObjectURL(audioUrl);
       };
 
       await audio.play();
-      console.log("Voice alert played successfully");
+      console.log("Voice alert played successfully (will repeat)");
     } catch (error) {
       console.error('Error playing voice alert:', error);
 
       const spoken = await speakWithBrowserTTS(text);
-      if (!spoken) playBellSound();
+      if (!spoken) playBellSound(true);
     }
-  }, [playBellSound, speakWithBrowserTTS]);
+  }, [playBellSound, speakWithBrowserTTS, stopAlarmSounds, triggerVibration]);
   // Dismiss active alarm
   const dismissAlarm = useCallback(() => {
+    stopAlarmSounds();
     if (activeAlarm?.audio) {
       activeAlarm.audio.pause();
       activeAlarm.audio.currentTime = 0;
     }
     setActiveAlarm(null);
-  }, [activeAlarm]);
+  }, [activeAlarm, stopAlarmSounds]);
 
   // Snooze alarm for specified minutes
   const snoozeAlarm = useCallback((minutes: number = 5) => {
     if (!activeAlarm) return;
     
     const snoozedAlarm = { ...activeAlarm };
+    
+    // Stop all alarm sounds
+    stopAlarmSounds();
     
     // Stop current audio
     if (activeAlarm.audio) {
@@ -226,7 +300,7 @@ export const useNotifications = () => {
     scheduledTimeoutsRef.current.set(snoozeKey, timeout);
     
     return timeout;
-  }, [activeAlarm, playVoiceAlert]);
+  }, [activeAlarm, playVoiceAlert, stopAlarmSounds]);
 
   // Show notification with voice alert
   // NOTE: We still play in-app alerts (voice/bell + toast) even if browser notifications are not granted.
