@@ -594,14 +594,20 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
   const markAppointmentComplete = async (appointmentId: string, scheduledReminderTime?: string) => {
     if (!user) return;
 
-    // Optimistic update
-    const previousAppointments = appointments;
-    const previousHistory = appointmentHistory;
+    // Optimistic update - update state immediately for instant UI feedback
+    const previousAppointments = [...appointments];
+    const previousHistory = [...appointmentHistory];
 
     const nowIso = new Date().toISOString();
-    setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'completed' } : a));
-
+    
+    // Find the appointment before updating
     const appointment = appointments.find(a => a.id === appointmentId);
+    
+    // Immediately update the appointments state
+    setAppointments(prev => prev.map(a => 
+      a.id === appointmentId ? { ...a, status: 'completed' } : a
+    ));
+
     const optimisticHistory: AppointmentHistoryEntry = {
       id: `temp-${Date.now()}`,
       appointment_id: appointmentId,
@@ -617,20 +623,28 @@ export const UserDataProvider = ({ children }: { children: ReactNode }) => {
     setAppointmentHistory(prev => [optimisticHistory, ...prev].slice(0, 100));
 
     try {
-      // Update appointment status
+      // Update appointment status in database
       const { data, error } = await supabase
         .from('appointments')
         .update({ status: 'completed' } as any)
         .eq('id', appointmentId)
         .eq('user_id', user.id)
         .select()
-        .maybeSingle();
+        .single();
 
       if (error) {
+        // Rollback on error
         setAppointments(previousAppointments);
         setAppointmentHistory(previousHistory);
         console.error('Error updating appointment:', error);
         return { error };
+      }
+
+      // Update with confirmed data from database to ensure consistency
+      if (data) {
+        setAppointments(prev => prev.map(a => 
+          a.id === appointmentId ? data : a
+        ));
       }
 
       // Add to appointment history
