@@ -72,21 +72,28 @@ export const MedicationAlarmOverlay = ({
 
   return (
     <Dialog open={!!activeAlarm} onOpenChange={(open) => !open && handleDismiss()}>
-      <DialogContent className="sm:max-w-md border-2 border-care-orange">
-        <DialogHeader className="text-center">
-          <div className={`w-20 h-20 ${isAppointment ? 'bg-care-blue' : 'bg-care-orange'} rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse`}>
+      <DialogContent className={`sm:max-w-md border-4 ${isAppointment ? 'border-care-blue' : 'border-care-orange'} shadow-2xl`}>
+        <div className={`absolute inset-0 ${isAppointment ? 'bg-care-blue/5' : 'bg-care-orange/5'} animate-pulse rounded-lg pointer-events-none`} />
+        
+        <DialogHeader className="text-center relative">
+          <div className={`w-24 h-24 ${isAppointment ? 'bg-care-blue' : 'bg-care-orange'} rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg`}>
+            <div className={`absolute w-24 h-24 ${isAppointment ? 'bg-care-blue' : 'bg-care-orange'} rounded-full animate-ping opacity-30`} />
             {isAppointment ? (
-              <Calendar className="h-10 w-10 text-white" />
+              <Calendar className="h-12 w-12 text-white relative z-10" />
             ) : (
-              <Pill className="h-10 w-10 text-white animate-bounce" />
+              <Pill className="h-12 w-12 text-white animate-bounce relative z-10" />
             )}
           </div>
           <DialogTitle className={`text-2xl font-bold ${isAppointment ? 'text-care-blue' : 'text-care-orange'}`}>
             {activeAlarm.title}
           </DialogTitle>
-          <DialogDescription className="text-base text-foreground mt-2">
+          <DialogDescription className="text-base text-foreground mt-2 font-medium">
             {activeAlarm.message}
           </DialogDescription>
+          <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
+            <Bell className="h-3 w-3 animate-pulse" />
+            Alarm is ringing - take action to stop
+          </p>
         </DialogHeader>
 
         <div className="space-y-4 pt-4">
