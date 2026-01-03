@@ -37,6 +37,7 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
     doctor_name: "",
     appointment_type: "",
     appointment_date: "",
+    appointment_time: "",
     duration_minutes: 30,
     is_virtual: false,
     notes: "",
@@ -72,9 +73,16 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
         });
         toast.success("Medication added successfully");
       } else {
+        const appointmentDateTime = new Date(`${appointmentData.appointment_date}T${appointmentData.appointment_time}`);
         await addAppointment({
-          ...appointmentData,
-          appointment_date: new Date(appointmentData.appointment_date).toISOString(),
+          doctor_name: appointmentData.doctor_name,
+          appointment_type: appointmentData.appointment_type,
+          appointment_date: appointmentDateTime.toISOString(),
+          duration_minutes: appointmentData.duration_minutes,
+          is_virtual: appointmentData.is_virtual,
+          notes: appointmentData.notes || undefined,
+          reminder_minutes: appointmentData.reminder_minutes,
+          enable_notifications: appointmentData.enable_notifications,
           status: "scheduled",
           notification_sent: false,
         });
@@ -97,6 +105,7 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
         doctor_name: "",
         appointment_type: "",
         appointment_date: "",
+        appointment_time: "",
         duration_minutes: 30,
         is_virtual: false,
         notes: "",
@@ -323,13 +332,24 @@ export const AddScheduleDialog = ({ onScheduleAdded }: AddScheduleDialogProps) =
               </div>
 
               <div>
-                <Label htmlFor="appointment-date">Date & Time *</Label>
+                <Label htmlFor="appointment-date">Date *</Label>
                 <Input
                   id="appointment-date"
-                  type="datetime-local"
+                  type="date"
                   value={appointmentData.appointment_date}
                   onChange={(e) => setAppointmentData({ ...appointmentData, appointment_date: e.target.value })}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={new Date().toISOString().split('T')[0]}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="appointment-time">Time *</Label>
+                <Input
+                  id="appointment-time"
+                  type="time"
+                  value={appointmentData.appointment_time}
+                  onChange={(e) => setAppointmentData({ ...appointmentData, appointment_time: e.target.value })}
                   required
                 />
               </div>
